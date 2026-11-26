@@ -169,3 +169,38 @@ export async function apiFetch<T>(
 
   return (await res.json()) as T;
 }
+
+export async function uploadWishlistImage(
+  file: File
+): Promise<{ image_id: string; preview_url: string }> {
+  let token = getStoredAccessToken();
+  if (!token) throw new Error("UNAUTHORIZED");
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  let res = await fetch(`${API_BASE_URL}/api/wishlist/images`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  if (res.status === 401) {
+    const newToken = await tryRefreshToken();
+    if (!newToken) {
+      clearAuthSession();
+      throw new Error("UNAUTHORIZED");
+    }
+    res = await fetch(`${API_BASE_URL}/api/wishlist/images`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${newToken}` },
+      body: formData,
+    });
+  }
+
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
+  }
+
+  return (await res.json()) as { image_id: string; preview_url: string };
+}

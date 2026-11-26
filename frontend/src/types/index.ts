@@ -104,12 +104,24 @@ export interface AuthResponse {
 export interface SavingsPot {
   id: string;
   name: string;
-  target_amount: number;
-  saved_amount: number;
-  deadline?: string;
+  target?: number | null;
+  saldo: number;
+  persen_target?: number;
+  sisa_target?: number;
+  deadline?: string | null;
   note: string;
   archived: boolean;
-  progress_pct?: number;
+  created_at?: string;
+}
+
+export interface SavingsMovement {
+  id: string;
+  pot_id: string;
+  pot_name: string;
+  type: "setor" | "tarik" | "pakai";
+  amount: number;
+  date: string;
+  note: string;
 }
 
 export interface WishlistItem {
@@ -118,7 +130,13 @@ export interface WishlistItem {
   price: number;
   priority: "rendah" | "sedang" | "tinggi";
   category: string;
+  link?: string;
+  situs?: string;
+  foto_url?: string | null;
+  image_id?: string | null;
   note: string;
-  target_date?: string;
+  target_date?: string | null;
   status: "aktif" | "dibeli" | "dibatalkan";
+  bisa_dibeli_sekarang?: boolean;
+  kurang_berapa?: number;
 }

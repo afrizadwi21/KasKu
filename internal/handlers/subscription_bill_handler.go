@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -237,6 +238,14 @@ func (h *Handler) PaySubscription(c *fiber.Ctx) error {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil data langganan")
 	}
 
+	_, _, saldoBebas, err := h.GetBalances(ctx, tx, userID)
+	if err != nil {
+		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal memeriksa saldo bebas")
+	}
+	if saldoBebas < amount {
+		return ErrorResponse(c, fiber.StatusUnprocessableEntity, fmt.Sprintf("Saldo tidak cukup untuk membayar langganan %s (saldo bebas: Rp %d, dibutuhkan: Rp %d)", name, saldoBebas, amount))
+	}
+
 	todayStr := time.Now().Format("2006-01-02")
 	txID := uuid.New().String()
 
@@ -451,6 +460,14 @@ func (h *Handler) PayBill(c *fiber.Ctx) error {
 
 	if paid {
 		return ErrorResponse(c, fiber.StatusConflict, "Tagihan ini sudah pernah dibayar")
+	}
+
+	_, _, saldoBebas, err := h.GetBalances(ctx, tx, userID)
+	if err != nil {
+		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal memeriksa saldo bebas")
+	}
+	if saldoBebas < amount {
+		return ErrorResponse(c, fiber.StatusUnprocessableEntity, fmt.Sprintf("Saldo tidak cukup untuk membayar tagihan %s (saldo bebas: Rp %d, dibutuhkan: Rp %d)", title, saldoBebas, amount))
 	}
 
 	now := time.Now()

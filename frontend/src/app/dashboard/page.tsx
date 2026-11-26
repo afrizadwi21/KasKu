@@ -7,13 +7,16 @@ import {
   ArrowUpRight,
   Calendar,
   CheckCircle2,
+  ExternalLink,
+  ImagePlus,
+  Link2,
   Plus,
+  RefreshCw,
   Search,
+  ShoppingBag,
   Trash2,
   Wallet,
   PiggyBank,
-  ShoppingBag,
-  RefreshCw,
 } from "lucide-react";
 import { Header } from "../../components/Header";
 import { MetricCard, formatRupiah } from "../../components/MetricCard";
@@ -23,11 +26,13 @@ import {
   clearAuthSession,
   getStoredAccessToken,
   logoutUser,
+  uploadWishlistImage,
 } from "../../lib/api";
 import {
   Bill,
   DebtSummary,
   OverviewData,
+  SavingsMovement,
   SavingsPot,
   Subscription,
   TodayData,
@@ -47,6 +52,22 @@ interface UnpaidApiResponse {
   total_belum_dibayar_langganan_tagihan: number;
   saldo_bebas: number;
   peringatan?: string;
+}
+
+interface DebtDetailResponse {
+  riwayat?: Transaction[];
+  transaksi?: Transaction[];
+}
+
+interface FetchLinkResponse {
+  ok: boolean;
+  situs: string;
+  link_asli: string;
+  link_akhir: string;
+  nama: string;
+  harga?: number | null;
+  gambar_kandidat?: string;
+  pesan?: string;
 }
 
 const EMPTY_OVERVIEW: OverviewData = {
@@ -76,6 +97,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -91,9 +113,19 @@ export default function DashboardPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [savingsPots, setSavingsPots] = useState<SavingsPot[]>([]);
+  const [savingsMovements, setSavingsMovements] = useState<SavingsMovement[]>([]);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
 
-  // Inline create form states (real user input, no dummy defaults)
+  // Debt payment & history states
+  const [activeDebtPay, setActiveDebtPay] = useState<{
+    kind: "piutang" | "hutang";
+    nama: string;
+  } | null>(null);
+  const [debtPayAmount, setDebtPayAmount] = useState("");
+  const [debtPayNote, setDebtPayNote] = useState("");
+  const [expandedDebtHistory, setExpandedDebtHistory] = useState<Record<string, Transaction[]>>({});
+
+  // Subscription & Bill form states
   const [subName, setSubName] = useState("");
   const [subAmount, setSubAmount] = useState("");
   const [subCycle, setSubCycle] = useState<"mingguan" | "bulanan" | "3_bulanan" | "tahunan">("bulanan");
@@ -103,17 +135,28 @@ export default function DashboardPage() {
   const [billAmount, setBillAmount] = useState("");
   const [billDueDate, setBillDueDate] = useState("");
 
+  // Savings form states
   const [potName, setPotName] = useState("");
   const [potTarget, setPotTarget] = useState("");
+  const [potNote, setPotNote] = useState("");
   const [potActionAmounts, setPotActionAmounts] = useState<Record<string, string>>({});
+  const [potActionNotes, setPotActionNotes] = useState<Record<string, string>>({});
 
+  // Wishlist form states (with link fetch & photo upload/URL)
+  const [wishLink, setWishLink] = useState("");
   const [wishName, setWishName] = useState("");
   const [wishPrice, setWishPrice] = useState("");
   const [wishPriority, setWishPriority] = useState<"rendah" | "sedang" | "tinggi">("sedang");
+  const [wishImageURL, setWishImageURL] = useState("");
+  const [wishImageID, setWishImageID] = useState("");
+  const [wishPreviewURL, setWishPreviewURL] = useState("");
+  const [wishNote, setWishNote] = useState("");
+  const [wishPriceSource, setWishPriceSource] = useState<"manual" | "link">("manual");
+  const [fetchingLink, setFetchingLink] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const loadAllData = useCallback(async () => {
     setLoading(true);
-    setErrorMsg("");
     try {
       const [
         meData,
@@ -125,6 +168,7 @@ export default function DashboardPage() {
         subsRes,
         billsRes,
         savingsRes,
+        movementsRes,
         wishlistRes,
       ] = await Promise.all([
         apiFetch<UserProfile>("/api/me"),
@@ -135,7 +179,8 @@ export default function DashboardPage() {
         apiFetch<UnpaidApiResponse>("/api/unpaid"),
         apiFetch<Subscription[]>("/api/subscriptions"),
         apiFetch<Bill[]>("/api/bills"),
-        apiFetch<{ pots?: SavingsPot[] } | SavingsPot[]>("/api/savings"),
+        apiFetch<{ pos?: SavingsPot[]; pots?: SavingsPot[] } | SavingsPot[]>("/api/savings"),
+        apiFetch<SavingsMovement[]>("/api/savings/movements"),
         apiFetch<{ items?: WishlistItem[] } | WishlistItem[]>("/api/wishlist"),
       ]);
 
@@ -151,10 +196,13 @@ export default function DashboardPage() {
 
       const potsArray = Array.isArray(savingsRes)
         ? savingsRes
+        : Array.isArray(savingsRes?.pos)
+        ? savingsRes.pos
         : Array.isArray(savingsRes?.pots)
         ? savingsRes.pots
         : [];
       setSavingsPots(potsArray);
+      setSavingsMovements(Array.isArray(movementsRes) ? movementsRes : []);
 
       const wishArray = Array.isArray(wishlistRes)
         ? wishlistRes
@@ -209,6 +257,7 @@ export default function DashboardPage() {
   }) => {
     try {
       setErrorMsg("");
+      setSuccessMsg("");
       await apiFetch("/api/transactions", {
         method: "POST",
         body: JSON.stringify(data),
@@ -233,10 +282,83 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSubmitDebtPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeDebtPay) return;
+    const nominal = Number(debtPayAmount);
+    if (nominal <= 0) {
+      setErrorMsg("Nominal pembayaran harus lebih dari 0.");
+      return;
+    }
+
+    try {
+      setErrorMsg("");
+      setSuccessMsg("");
+      const isPiutang = activeDebtPay.kind === "piutang";
+      await apiFetch("/api/transactions", {
+        method: "POST",
+        body: JSON.stringify({
+          date: new Date().toISOString().split("T")[0],
+          type: isPiutang ? "masuk" : "keluar",
+          category: isPiutang ? "Terima Bayar Hutang" : "Bayar Hutang Saya",
+          party: activeDebtPay.nama,
+          source: isPiutang ? activeDebtPay.nama : "",
+          note:
+            debtPayNote.trim() ||
+            `Pembayaran ${isPiutang ? "piutang" : "hutang"} ${formatRupiah(nominal)}`,
+          amount: nominal,
+          items: [],
+        }),
+      });
+      const paidName = activeDebtPay.nama;
+      setActiveDebtPay(null);
+      setDebtPayAmount("");
+      setDebtPayNote("");
+      setSuccessMsg(`Pembayaran untuk ${paidName} berhasil dicatat.`);
+      await loadAllData();
+      // Refresh expanded history if open
+      if (expandedDebtHistory[paidName]) {
+        const res = await apiFetch<DebtDetailResponse>(
+          `/api/debts/${encodeURIComponent(paidName)}`
+        );
+        const list = res.riwayat || res.transaksi || [];
+        setExpandedDebtHistory((prev) => ({ ...prev, [paidName]: list }));
+      }
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal mencatat pembayaran."
+      );
+    }
+  };
+
+  const handleToggleDebtHistory = async (nama: string) => {
+    if (expandedDebtHistory[nama]) {
+      setExpandedDebtHistory((prev) => {
+        const copy = { ...prev };
+        delete copy[nama];
+        return copy;
+      });
+      return;
+    }
+    try {
+      const res = await apiFetch<DebtDetailResponse>(
+        `/api/debts/${encodeURIComponent(nama)}`
+      );
+      const list = res.riwayat || res.transaksi || [];
+      setExpandedDebtHistory((prev) => ({ ...prev, [nama]: list }));
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal mengambil riwayat catatan."
+      );
+    }
+  };
+
   const handlePaySubscription = async (id: string) => {
     try {
       setErrorMsg("");
+      setSuccessMsg("");
       await apiFetch(`/api/subscriptions/${id}/pay`, { method: "POST" });
+      setSuccessMsg("Pembayaran langganan berhasil dicatat.");
       await loadAllData();
     } catch (err: unknown) {
       setErrorMsg(
@@ -271,7 +393,9 @@ export default function DashboardPage() {
   const handlePayBill = async (id: string) => {
     try {
       setErrorMsg("");
+      setSuccessMsg("");
       await apiFetch(`/api/bills/${id}/pay`, { method: "POST" });
+      setSuccessMsg("Tagihan berhasil dibayar.");
       await loadAllData();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Gagal membayar tagihan.");
@@ -303,16 +427,19 @@ export default function DashboardPage() {
     e.preventDefault();
     try {
       setErrorMsg("");
+      setSuccessMsg("");
       await apiFetch("/api/savings", {
         method: "POST",
         body: JSON.stringify({
           name: potName.trim(),
           target_amount: Number(potTarget),
-          note: "",
+          note: potNote.trim(),
         }),
       });
       setPotName("");
       setPotTarget("");
+      setPotNote("");
+      setSuccessMsg("Pos tabungan berhasil dibuat.");
       await loadAllData();
     } catch (err: unknown) {
       setErrorMsg(
@@ -332,15 +459,25 @@ export default function DashboardPage() {
     }
     try {
       setErrorMsg("");
+      setSuccessMsg("");
+      const customNote = (potActionNotes[potId] || "").trim();
       await apiFetch(`/api/savings/${potId}/${action}`, {
         method: "POST",
         body: JSON.stringify({
           amount,
           date: new Date().toISOString().split("T")[0],
-          note: action === "deposit" ? "Setor tabungan" : "Tarik tabungan",
+          note:
+            customNote ||
+            (action === "deposit" ? "Setor tabungan" : "Tarik tabungan"),
         }),
       });
       setPotActionAmounts((prev) => ({ ...prev, [potId]: "" }));
+      setPotActionNotes((prev) => ({ ...prev, [potId]: "" }));
+      setSuccessMsg(
+        action === "deposit"
+          ? "Setoran tabungan berhasil dicatat."
+          : "Penarikan tabungan berhasil dicatat."
+      );
       await loadAllData();
     } catch (err: unknown) {
       setErrorMsg(
@@ -349,10 +486,72 @@ export default function DashboardPage() {
     }
   };
 
+  const handleFetchWishlistLink = async () => {
+    const url = wishLink.trim();
+    if (!url) {
+      setErrorMsg("Masukkan link produk terlebih dahulu.");
+      return;
+    }
+    setFetchingLink(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const meta = await apiFetch<FetchLinkResponse>("/api/wishlist/fetch-link", {
+        method: "POST",
+        body: JSON.stringify({ url }),
+      });
+      if (meta.link_akhir) setWishLink(meta.link_akhir);
+      if (meta.nama) setWishName(meta.nama);
+      if (meta.harga && meta.harga > 0) {
+        setWishPrice(String(meta.harga));
+        setWishPriceSource("link");
+      }
+      if (meta.gambar_kandidat) {
+        setWishImageURL(meta.gambar_kandidat);
+        setWishPreviewURL(meta.gambar_kandidat);
+        setWishImageID("");
+      }
+      if (!meta.ok && meta.pesan) {
+        setErrorMsg(meta.pesan);
+      } else {
+        setSuccessMsg("Data produk berhasil diambil dari link.");
+      }
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal mengambil data dari link."
+      );
+    } finally {
+      setFetchingLink(false);
+    }
+  };
+
+  const handleUploadWishlistFile = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    setErrorMsg("");
+    try {
+      const uploaded = await uploadWishlistImage(file);
+      setWishImageID(uploaded.image_id);
+      setWishPreviewURL(uploaded.preview_url);
+      setWishImageURL("");
+      setSuccessMsg("Foto produk berhasil diunggah.");
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal mengunggah foto produk."
+      );
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleCreateWishlist = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setErrorMsg("");
+      setSuccessMsg("");
       await apiFetch("/api/wishlist", {
         method: "POST",
         body: JSON.stringify({
@@ -360,11 +559,22 @@ export default function DashboardPage() {
           price: Number(wishPrice),
           priority: wishPriority,
           category: "Belanja",
-          note: "",
+          link: wishLink.trim() || undefined,
+          image_id: wishImageID || undefined,
+          image_url: !wishImageID && wishImageURL.trim() ? wishImageURL.trim() : undefined,
+          price_source: wishPriceSource,
+          note: wishNote.trim(),
         }),
       });
+      setWishLink("");
       setWishName("");
       setWishPrice("");
+      setWishImageURL("");
+      setWishImageID("");
+      setWishPreviewURL("");
+      setWishNote("");
+      setWishPriceSource("manual");
+      setSuccessMsg("Item wishlist berhasil disimpan.");
       await loadAllData();
     } catch (err: unknown) {
       setErrorMsg(
@@ -376,10 +586,12 @@ export default function DashboardPage() {
   const handleBuyWishlist = async (id: string) => {
     try {
       setErrorMsg("");
+      setSuccessMsg("");
       await apiFetch(`/api/wishlist/${id}/buy`, {
         method: "POST",
         body: JSON.stringify({ source: "bebas" }),
       });
+      setSuccessMsg("Pembelian wishlist berhasil dicatat.");
       await loadAllData();
     } catch (err: unknown) {
       setErrorMsg(
@@ -443,7 +655,20 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setErrorMsg("")}
-              className="font-semibold underline"
+              className="font-semibold underline cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="mb-5 flex items-center justify-between rounded-sm border border-[#10b981]/40 bg-[#ecfdf5] px-4 py-3 text-xs text-[#059669]">
+            <span>{successMsg}</span>
+            <button
+              type="button"
+              onClick={() => setSuccessMsg("")}
+              className="font-semibold underline cursor-pointer"
             >
               Tutup
             </button>
@@ -772,9 +997,10 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* VIEW 3: DEBTS */}
+        {/* VIEW 3: DEBTS WITH PARTIAL PAYMENT & NOTES */}
         {activeTab === "debts" && (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Piutang */}
             <div className="rounded-sm border border-[#0b110e]/10 bg-white p-5 space-y-4">
               <h2 className="font-display text-xl text-[#0b110e]">
                 Piutang (Orang Berhutang ke Anda)
@@ -785,30 +1011,147 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {piutangList.map((d) => (
-                    <div
-                      key={d.nama}
-                      className="rounded-sm border border-[#0b110e]/10 p-4 space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm">{d.nama}</span>
-                        <span className="rounded-full bg-[#ecfdf5] px-2.5 py-0.5 text-[11px] font-semibold text-[#059669]">
-                          {d.status}
-                        </span>
+                  {piutangList.map((d) => {
+                    const isPaying =
+                      activeDebtPay?.kind === "piutang" &&
+                      activeDebtPay?.nama === d.nama;
+                    const history = expandedDebtHistory[d.nama];
+
+                    return (
+                      <div
+                        key={d.nama}
+                        className="rounded-sm border border-[#0b110e]/10 p-4 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-sm">{d.nama}</span>
+                          <span className="rounded-full bg-[#ecfdf5] px-2.5 py-0.5 text-[11px] font-semibold text-[#059669]">
+                            {d.status}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-[#47544d] font-mono num-tabular">
+                          <span>Total: {formatRupiah(d.total)}</span>
+                          <span>Dibayar: {formatRupiah(d.dibayar)}</span>
+                          <span className="font-semibold text-[#0b110e]">
+                            Sisa: {formatRupiah(d.sisa)}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-[#eef1ef] overflow-hidden">
+                          <div
+                            className="h-full bg-[#10b981]"
+                            style={{ width: `${Math.min(100, d.persen)}%` }}
+                          />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {d.sisa > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveDebtPay(
+                                  isPaying ? null : { kind: "piutang", nama: d.nama }
+                                );
+                                setDebtPayAmount(String(d.sisa));
+                                setDebtPayNote("");
+                              }}
+                              className="rounded-sm bg-[#10b981] px-3 py-1.5 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
+                            >
+                              {isPaying ? "Batal" : "Update / Cicil Bayar"}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDebtHistory(d.nama)}
+                            className="rounded-sm border border-[#0b110e]/15 px-3 py-1.5 text-xs font-medium text-[#0b110e] hover:bg-[#eef1ef] cursor-pointer"
+                          >
+                            {history ? "Tutup Catatan" : "Lihat Catatan"}
+                          </button>
+                        </div>
+
+                        {isPaying && (
+                          <form
+                            onSubmit={handleSubmitDebtPayment}
+                            className="rounded-sm border border-[#10b981]/30 bg-[#f7f8f7] p-3 space-y-2.5"
+                          >
+                            <div className="text-xs font-semibold text-[#0b110e]">
+                              Catat Pembayaran dari {d.nama}
+                            </div>
+                            <input
+                              type="number"
+                              required
+                              min={1}
+                              max={d.sisa}
+                              placeholder="Nominal dibayar (Rp)"
+                              value={debtPayAmount}
+                              onChange={(e) => setDebtPayAmount(e.target.value)}
+                              className="w-full rounded-sm border border-[#0b110e]/15 bg-white px-3 py-1.5 text-xs focus:border-[#10b981] focus:outline-none"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Catatan (mis. Baru dibayar Rp 10.000, sisa menyusul)"
+                              value={debtPayNote}
+                              onChange={(e) => setDebtPayNote(e.target.value)}
+                              className="w-full rounded-sm border border-[#0b110e]/15 bg-white px-3 py-1.5 text-xs focus:border-[#10b981] focus:outline-none"
+                            />
+                            <button
+                              type="submit"
+                              className="w-full rounded-sm bg-[#059669] hover:bg-[#10b981] text-white py-1.5 text-xs font-semibold cursor-pointer"
+                            >
+                              Simpan Pembayaran
+                            </button>
+                          </form>
+                        )}
+
+                        {history && (
+                          <div className="rounded-sm border border-[#0b110e]/10 bg-[#f7f8f7] p-3 space-y-2">
+                            <div className="text-[11px] font-semibold uppercase tracking-wider text-[#47544d]">
+                              Riwayat & Catatan ({history.length})
+                            </div>
+                            {history.length === 0 ? (
+                              <p className="text-xs text-[#47544d]">
+                                Belum ada riwayat transaksi.
+                              </p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {history.map((h) => (
+                                  <div
+                                    key={h.id}
+                                    className="flex items-start justify-between gap-2 text-xs border-b border-[#0b110e]/10 pb-1.5 last:border-0 last:pb-0"
+                                  >
+                                    <div>
+                                      <div className="font-medium text-[#0b110e]">
+                                        {h.category} ·{" "}
+                                        <span className="font-mono text-[#47544d]">
+                                          {h.date}
+                                        </span>
+                                      </div>
+                                      <div className="text-[11px] text-[#47544d]">
+                                        {h.note || "Tanpa catatan"}
+                                      </div>
+                                    </div>
+                                    <span
+                                      className={`font-mono font-semibold num-tabular ${
+                                        h.type === "masuk"
+                                          ? "text-[#059669]"
+                                          : "text-[#0b110e]"
+                                      }`}
+                                    >
+                                      {h.type === "masuk" ? "+" : "-"}
+                                      {formatRupiah(h.amount)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex justify-between text-xs text-[#47544d] font-mono num-tabular">
-                        <span>Total: {formatRupiah(d.total)}</span>
-                        <span>Dibayar: {formatRupiah(d.dibayar)}</span>
-                        <span className="font-semibold text-[#0b110e]">
-                          Sisa: {formatRupiah(d.sisa)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
+            {/* Hutang Saya */}
             <div className="rounded-sm border border-[#0b110e]/10 bg-white p-5 space-y-4">
               <h2 className="font-display text-xl text-[#0b110e]">
                 Hutang Saya
@@ -819,26 +1162,135 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {hutangSayaList.map((d) => (
-                    <div
-                      key={d.nama}
-                      className="rounded-sm border border-[#0b110e]/10 p-4 space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm">{d.nama}</span>
-                        <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
-                          {d.status}
-                        </span>
+                  {hutangSayaList.map((d) => {
+                    const isPaying =
+                      activeDebtPay?.kind === "hutang" &&
+                      activeDebtPay?.nama === d.nama;
+                    const history = expandedDebtHistory[d.nama];
+
+                    return (
+                      <div
+                        key={d.nama}
+                        className="rounded-sm border border-[#0b110e]/10 p-4 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-sm">{d.nama}</span>
+                          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                            {d.status}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-[#47544d] font-mono num-tabular">
+                          <span>Total: {formatRupiah(d.total)}</span>
+                          <span>Dibayar: {formatRupiah(d.dibayar)}</span>
+                          <span className="font-semibold text-[#0b110e]">
+                            Sisa: {formatRupiah(d.sisa)}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-[#eef1ef] overflow-hidden">
+                          <div
+                            className="h-full bg-[#10b981]"
+                            style={{ width: `${Math.min(100, d.persen)}%` }}
+                          />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {d.sisa > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveDebtPay(
+                                  isPaying ? null : { kind: "hutang", nama: d.nama }
+                                );
+                                setDebtPayAmount(String(d.sisa));
+                                setDebtPayNote("");
+                              }}
+                              className="rounded-sm bg-[#10b981] px-3 py-1.5 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
+                            >
+                              {isPaying ? "Batal" : "Bayar / Cicil"}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDebtHistory(d.nama)}
+                            className="rounded-sm border border-[#0b110e]/15 px-3 py-1.5 text-xs font-medium text-[#0b110e] hover:bg-[#eef1ef] cursor-pointer"
+                          >
+                            {history ? "Tutup Catatan" : "Lihat Catatan"}
+                          </button>
+                        </div>
+
+                        {isPaying && (
+                          <form
+                            onSubmit={handleSubmitDebtPayment}
+                            className="rounded-sm border border-[#10b981]/30 bg-[#f7f8f7] p-3 space-y-2.5"
+                          >
+                            <div className="text-xs font-semibold text-[#0b110e]">
+                              Bayar Hutang ke {d.nama}
+                            </div>
+                            <input
+                              type="number"
+                              required
+                              min={1}
+                              max={d.sisa}
+                              placeholder="Nominal dibayar (Rp)"
+                              value={debtPayAmount}
+                              onChange={(e) => setDebtPayAmount(e.target.value)}
+                              className="w-full rounded-sm border border-[#0b110e]/15 bg-white px-3 py-1.5 text-xs focus:border-[#10b981] focus:outline-none"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Catatan (mis. Baru dibayar segini)"
+                              value={debtPayNote}
+                              onChange={(e) => setDebtPayNote(e.target.value)}
+                              className="w-full rounded-sm border border-[#0b110e]/15 bg-white px-3 py-1.5 text-xs focus:border-[#10b981] focus:outline-none"
+                            />
+                            <button
+                              type="submit"
+                              className="w-full rounded-sm bg-[#059669] hover:bg-[#10b981] text-white py-1.5 text-xs font-semibold cursor-pointer"
+                            >
+                              Simpan Pembayaran
+                            </button>
+                          </form>
+                        )}
+
+                        {history && (
+                          <div className="rounded-sm border border-[#0b110e]/10 bg-[#f7f8f7] p-3 space-y-2">
+                            <div className="text-[11px] font-semibold uppercase tracking-wider text-[#47544d]">
+                              Riwayat & Catatan ({history.length})
+                            </div>
+                            {history.length === 0 ? (
+                              <p className="text-xs text-[#47544d]">
+                                Belum ada riwayat transaksi.
+                              </p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {history.map((h) => (
+                                  <div
+                                    key={h.id}
+                                    className="flex items-start justify-between gap-2 text-xs border-b border-[#0b110e]/10 pb-1.5 last:border-0 last:pb-0"
+                                  >
+                                    <div>
+                                      <div className="font-medium text-[#0b110e]">
+                                        {h.category} ·{" "}
+                                        <span className="font-mono text-[#47544d]">
+                                          {h.date}
+                                        </span>
+                                      </div>
+                                      <div className="text-[11px] text-[#47544d]">
+                                        {h.note || "Tanpa catatan"}
+                                      </div>
+                                    </div>
+                                    <span className="font-mono font-semibold num-tabular">
+                                      {formatRupiah(h.amount)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex justify-between text-xs text-[#47544d] font-mono num-tabular">
-                        <span>Total: {formatRupiah(d.total)}</span>
-                        <span>Dibayar: {formatRupiah(d.dibayar)}</span>
-                        <span className="font-semibold text-[#0b110e]">
-                          Sisa: {formatRupiah(d.sisa)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1019,7 +1471,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* VIEW 5: SAVINGS */}
+        {/* VIEW 5: SAVINGS (FIXED POS + MOVEMENTS HISTORY) */}
         {activeTab === "savings" && (
           <div className="space-y-6">
             <div className="rounded-sm border border-[#0b110e]/10 bg-white p-5">
@@ -1028,7 +1480,7 @@ export default function DashboardPage() {
               </h2>
               <form
                 onSubmit={handleCreateSavingsPot}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+                className="grid grid-cols-1 sm:grid-cols-4 gap-3"
               >
                 <input
                   type="text"
@@ -1045,6 +1497,13 @@ export default function DashboardPage() {
                   placeholder="Target nominal (Rp)"
                   value={potTarget}
                   onChange={(e) => setPotTarget(e.target.value)}
+                  className="rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
+                />
+                <input
+                  type="text"
+                  placeholder="Catatan pos (opsional)"
+                  value={potNote}
+                  onChange={(e) => setPotNote(e.target.value)}
                   className="rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
                 />
                 <button
@@ -1066,20 +1525,26 @@ export default function DashboardPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {savingsPots.map((pot) => {
+                  const target = pot.target || 0;
+                  const saldo = pot.saldo || 0;
                   const pct =
-                    pot.target_amount > 0
-                      ? Math.min(100, Math.round((pot.saved_amount / pot.target_amount) * 100))
+                    target > 0
+                      ? Math.min(100, Math.round((saldo / target) * 100))
                       : 0;
                   return (
                     <div
                       key={pot.id}
                       className="rounded-sm border border-[#0b110e]/10 bg-white p-5 space-y-4"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
                           <h3 className="font-semibold text-base">{pot.name}</h3>
-                          <p className="text-xs font-mono text-[#47544d] num-tabular">
-                            {formatRupiah(pot.saved_amount)} / {formatRupiah(pot.target_amount)} ({pct}%)
+                          {pot.note && (
+                            <p className="text-xs text-[#47544d] mt-0.5">{pot.note}</p>
+                          )}
+                          <p className="text-xs font-mono text-[#47544d] num-tabular mt-1">
+                            {formatRupiah(saldo)}
+                            {target > 0 ? ` / ${formatRupiah(target)} (${pct}%)` : ""}
                           </p>
                         </div>
                       </div>
@@ -1089,61 +1554,137 @@ export default function DashboardPage() {
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            placeholder="Nominal (Rp)"
+                            value={potActionAmounts[pot.id] || ""}
+                            onChange={(e) =>
+                              setPotActionAmounts((prev) => ({
+                                ...prev,
+                                [pot.id]: e.target.value,
+                              }))
+                            }
+                            className="flex-1 rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-1.5 text-xs focus:border-[#10b981] focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSavingsAction(pot.id, "deposit")}
+                            className="rounded-sm bg-[#10b981] px-3 py-1.5 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
+                          >
+                            Setor
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSavingsAction(pot.id, "withdraw")}
+                            className="rounded-sm border border-[#0b110e]/15 px-3 py-1.5 text-xs font-medium text-[#0b110e] hover:bg-[#eef1ef] cursor-pointer"
+                          >
+                            Tarik
+                          </button>
+                        </div>
                         <input
-                          type="number"
-                          min={1}
-                          placeholder="Nominal (Rp)"
-                          value={potActionAmounts[pot.id] || ""}
+                          type="text"
+                          placeholder="Catatan mutasi tabungan (opsional)"
+                          value={potActionNotes[pot.id] || ""}
                           onChange={(e) =>
-                            setPotActionAmounts((prev) => ({
+                            setPotActionNotes((prev) => ({
                               ...prev,
                               [pot.id]: e.target.value,
                             }))
                           }
-                          className="flex-1 rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-1.5 text-xs focus:border-[#10b981] focus:outline-none"
+                          className="w-full rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-1.5 text-xs focus:border-[#10b981] focus:outline-none"
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleSavingsAction(pot.id, "deposit")}
-                          className="rounded-sm bg-[#10b981] px-3 py-1.5 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
-                        >
-                          Setor
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSavingsAction(pot.id, "withdraw")}
-                          className="rounded-sm border border-[#0b110e]/15 px-3 py-1.5 text-xs font-medium text-[#0b110e] hover:bg-[#eef1ef] cursor-pointer"
-                        >
-                          Tarik
-                        </button>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
+
+            {/* Savings Movements History */}
+            <div className="rounded-sm border border-[#0b110e]/10 bg-white p-5 space-y-3">
+              <h3 className="font-display text-lg text-[#0b110e]">
+                Catatan Mutasi Tabungan ({savingsMovements.length})
+              </h3>
+              {savingsMovements.length === 0 ? (
+                <p className="py-6 text-center text-xs text-[#47544d]">
+                  Belum ada catatan setor atau tarik tabungan.
+                </p>
+              ) : (
+                <div className="divide-y divide-[#0b110e]/10">
+                  {savingsMovements.map((m) => (
+                    <div
+                      key={m.id}
+                      className="py-2.5 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <div className="font-semibold text-[#0b110e]">
+                          {m.pot_name} ·{" "}
+                          <span className="uppercase font-mono text-[#059669]">
+                            {m.type}
+                          </span>
+                        </div>
+                        <div className="text-[#47544d]">
+                          {m.note || "Tanpa catatan"} ·{" "}
+                          <span className="font-mono">{m.date}</span>
+                        </div>
+                      </div>
+                      <span
+                        className={`font-mono font-semibold num-tabular ${
+                          m.type === "setor" ? "text-[#059669]" : "text-[#0b110e]"
+                        }`}
+                      >
+                        {m.type === "setor" ? "+" : "-"}
+                        {formatRupiah(m.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* VIEW 6: WISHLIST */}
+        {/* VIEW 6: WISHLIST (LINK FETCH + PHOTO UPLOAD/PREVIEW) */}
         {activeTab === "wishlist" && (
           <div className="space-y-6">
-            <div className="rounded-sm border border-[#0b110e]/10 bg-white p-5">
-              <h2 className="font-display text-xl text-[#0b110e] mb-4">
+            <div className="rounded-sm border border-[#0b110e]/10 bg-white p-5 space-y-4">
+              <h2 className="font-display text-xl text-[#0b110e]">
                 Tambah Item Wishlist
               </h2>
-              <form
-                onSubmit={handleCreateWishlist}
-                className="grid grid-cols-1 sm:grid-cols-4 gap-3"
-              >
+
+              {/* Fetch from Link */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Link2 className="h-3.5 w-3.5 text-[#47544d] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="url"
+                    placeholder="Tempel link produk (Shopee, Tokopedia, dll)..."
+                    value={wishLink}
+                    onChange={(e) => setWishLink(e.target.value)}
+                    className="w-full rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] pl-9 pr-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFetchWishlistLink}
+                  disabled={fetchingLink}
+                  className="rounded-sm bg-[#0b110e] hover:bg-[#10b981] hover:text-[#070a09] disabled:opacity-60 text-white px-4 py-2 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  {fetchingLink ? "Mengambil..." : "Ambil Data dari Link"}
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateWishlist} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <input
                   type="text"
                   required
                   placeholder="Nama barang"
                   value={wishName}
                   onChange={(e) => setWishName(e.target.value)}
-                  className="rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
+                  className="sm:col-span-4 rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
                 />
                 <input
                   type="number"
@@ -1151,8 +1692,11 @@ export default function DashboardPage() {
                   min={1}
                   placeholder="Harga (Rp)"
                   value={wishPrice}
-                  onChange={(e) => setWishPrice(e.target.value)}
-                  className="rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
+                  onChange={(e) => {
+                    setWishPrice(e.target.value);
+                    setWishPriceSource("manual");
+                  }}
+                  className="sm:col-span-3 rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
                 />
                 <select
                   value={wishPriority}
@@ -1161,17 +1705,60 @@ export default function DashboardPage() {
                       e.target.value as "rendah" | "sedang" | "tinggi"
                     )
                   }
-                  className="rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
+                  className="sm:col-span-2 rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
                 >
                   <option value="tinggi">Prioritas Tinggi</option>
                   <option value="sedang">Prioritas Sedang</option>
                   <option value="rendah">Prioritas Rendah</option>
                 </select>
+                <input
+                  type="text"
+                  placeholder="Catatan (opsional)"
+                  value={wishNote}
+                  onChange={(e) => setWishNote(e.target.value)}
+                  className="sm:col-span-3 rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
+                />
+
+                {/* Photo URL or Upload */}
+                <div className="sm:col-span-6 flex items-center gap-2">
+                  <input
+                    type="url"
+                    placeholder="URL foto produk (otomatis dari link atau tempel manual)"
+                    value={wishImageURL}
+                    onChange={(e) => {
+                      setWishImageURL(e.target.value);
+                      setWishPreviewURL(e.target.value);
+                      setWishImageID("");
+                    }}
+                    className="flex-1 rounded-sm border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs focus:border-[#10b981] focus:outline-none"
+                  />
+                  <label className="inline-flex items-center gap-1.5 rounded-sm border border-[#0b110e]/15 bg-[#eef1ef] px-3 py-2 text-xs font-medium text-[#0b110e] hover:bg-[#10b981]/20 cursor-pointer shrink-0">
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    <span>{uploadingImage ? "Mengunggah..." : "Upload Foto"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleUploadWishlistFile}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="sm:col-span-3 flex items-center">
+                  {wishPreviewURL && (
+                    <img
+                      src={wishPreviewURL}
+                      alt="Preview produk"
+                      className="h-10 w-10 rounded-sm object-cover border border-[#0b110e]/15"
+                    />
+                  )}
+                </div>
+
                 <button
                   type="submit"
-                  className="rounded-sm bg-[#10b981] hover:bg-[#34d399] text-[#070a09] py-2 px-4 text-xs font-semibold cursor-pointer"
+                  className="sm:col-span-3 rounded-sm bg-[#10b981] hover:bg-[#34d399] text-[#070a09] py-2 px-4 text-xs font-semibold cursor-pointer"
                 >
-                  + Tambah Wishlist
+                  + Simpan Wishlist
                 </button>
               </form>
             </div>
@@ -1188,44 +1775,74 @@ export default function DashboardPage() {
                 {wishlistItems.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-sm border border-[#0b110e]/10 bg-white p-5 flex flex-col justify-between gap-4"
+                    className="rounded-sm border border-[#0b110e]/10 bg-white overflow-hidden flex flex-col justify-between"
                   >
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs uppercase font-mono text-[#059669]">
-                          {item.priority}
-                        </span>
-                        <span className="text-xs text-[#47544d]">{item.status}</span>
+                    {item.foto_url ? (
+                      <div className="aspect-[16/10] w-full bg-[#eef1ef] overflow-hidden border-b border-[#0b110e]/10">
+                        <img
+                          src={item.foto_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                      <h3 className="mt-1 font-semibold text-base text-[#0b110e]">
-                        {item.name}
-                      </h3>
-                      <p className="mt-1 font-mono text-lg font-bold text-[#0b110e] num-tabular">
-                        {formatRupiah(item.price)}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#0b110e]/10">
-                      {item.status === "aktif" ? (
+                    ) : (
+                      <div className="aspect-[16/10] w-full bg-[#eef1ef] flex items-center justify-center border-b border-[#0b110e]/10 text-[#47544d]/40">
+                        <ShoppingBag className="h-8 w-8" />
+                      </div>
+                    )}
+
+                    <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs uppercase font-mono text-[#059669]">
+                            {item.priority}
+                          </span>
+                          <span className="text-xs text-[#47544d]">{item.status}</span>
+                        </div>
+                        <h3 className="mt-1 font-semibold text-base text-[#0b110e]">
+                          {item.name}
+                        </h3>
+                        <p className="mt-1 font-mono text-lg font-bold text-[#0b110e] num-tabular">
+                          {formatRupiah(item.price)}
+                        </p>
+                        {item.note && (
+                          <p className="mt-1 text-xs text-[#47544d]">{item.note}</p>
+                        )}
+                        {item.link && (
+                          <a
+                            href={item.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#059669] hover:underline"
+                          >
+                            <span>{item.situs || "Buka Link Produk"}</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#0b110e]/10">
+                        {item.status === "aktif" ? (
+                          <button
+                            type="button"
+                            onClick={() => handleBuyWishlist(item.id)}
+                            className="flex-1 rounded-sm bg-[#10b981] py-1.5 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
+                          >
+                            Beli Sekarang
+                          </button>
+                        ) : (
+                          <span className="text-xs font-medium text-[#059669]">
+                            Sudah Dibeli
+                          </span>
+                        )}
                         <button
                           type="button"
-                          onClick={() => handleBuyWishlist(item.id)}
-                          className="flex-1 rounded-sm bg-[#10b981] py-1.5 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
+                          onClick={() => handleDeleteWishlist(item.id)}
+                          title="Hapus wishlist"
+                          className="p-1.5 text-[#47544d] hover:text-red-600 cursor-pointer"
                         >
-                          Beli Sekarang
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                      ) : (
-                        <span className="text-xs font-medium text-[#059669]">
-                          Sudah Dibeli
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteWishlist(item.id)}
-                        title="Hapus wishlist"
-                        className="p-1.5 text-[#47544d] hover:text-red-600 cursor-pointer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      </div>
                     </div>
                   </div>
                 ))}
