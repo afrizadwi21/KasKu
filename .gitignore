@@ -35,3 +35,10 @@ frontend/.env.local
 .idea/
 *.swp
 *.swo
+
+# Impeccable temporary skill/tooling files (ignored from git tracking)
+.agent/
+.agents/
+.gemini/
+.impeccable/
+
