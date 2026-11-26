@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, ShieldCheck, Lock, FileSpreadsheet, RotateCcw } from "lucide-react";
-import { Scroll3DFrame } from "./Scroll3DFrame";
 import { Text3D } from "./Text3D";
 
 const PRIVACY_POINTS = [
@@ -124,18 +123,6 @@ export function LandingFooter() {
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>
-
-            <Scroll3DFrame direction="left" intensity={1.25} className="pt-4">
-              <div className="relative overflow-hidden rounded-sm border border-[#10b981]/25 bg-[#0e1412] shadow-[0_24px_60px_-20px_rgba(16,185,129,0.22)]">
-                <div className="aspect-[16/10] overflow-hidden">
-                  <img
-                    src="/images/3d-privacy-lock.jpg"
-                    alt="Render 3D gembok keamanan data pribadi KasKu"
-                    className="w-full h-full object-cover contrast-110"
-                  />
-                </div>
-              </div>
-            </Scroll3DFrame>
           </div>
 
           {/* 3D Spatial Cascade Deck */}
