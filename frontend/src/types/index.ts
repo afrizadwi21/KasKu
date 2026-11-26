@@ -139,4 +139,8 @@ export interface WishlistItem {
   status: "aktif" | "dibeli" | "dibatalkan";
   bisa_dibeli_sekarang?: boolean;
   kurang_berapa?: number;
+  saving_pot_id?: string | null;
+  saving_pot_name?: string | null;
+  saldo_pos?: number | null;
+  persen_terkumpul?: number | null;
 }

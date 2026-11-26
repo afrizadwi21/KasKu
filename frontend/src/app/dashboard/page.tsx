@@ -108,6 +108,14 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "masuk" | "keluar">("all");
+  const [txMonthFilter, setTxMonthFilter] = useState<string>("all");
+  const [savingsFilter, setSavingsFilter] = useState<"all" | "umum" | "wishlist">("all");
+  const [wishSearch, setWishSearch] = useState("");
+  const [wishPriorityFilter, setWishPriorityFilter] = useState<"all" | "tinggi" | "sedang" | "rendah">("all");
+  const [wishStatusFilter, setWishStatusFilter] = useState<"all" | "aktif" | "dibeli">("all");
+  const [wishSavingPotChoice, setWishSavingPotChoice] = useState<string>("");
+  const [wishDepositAmounts, setWishDepositAmounts] = useState<Record<string, string>>({});
+  const [brokenWishlistImgs, setBrokenWishlistImgs] = useState<Record<string, boolean>>({});
 
   const [overview, setOverview] = useState<OverviewData>(EMPTY_OVERVIEW);
   const [todayData, setTodayData] = useState<TodayData>(EMPTY_TODAY);
@@ -596,6 +604,22 @@ export default function DashboardPage() {
     try {
       setErrorMsg("");
       setSuccessMsg("");
+      let linkedPotId: string | undefined = undefined;
+
+      if (wishSavingPotChoice === "auto") {
+        const createdPot = await apiFetch<{ id?: string; pos?: { id: string } }>("/api/savings", {
+          method: "POST",
+          body: JSON.stringify({
+            name: `Wishlist: ${wishName.trim()}`,
+            target_amount: Number(wishPrice),
+            note: `Tabungan khusus wishlist ${wishName.trim()}`,
+          }),
+        });
+        linkedPotId = createdPot.id || createdPot.pos?.id;
+      } else if (wishSavingPotChoice) {
+        linkedPotId = wishSavingPotChoice;
+      }
+
       await apiFetch("/api/wishlist", {
         method: "POST",
         body: JSON.stringify({
@@ -608,6 +632,7 @@ export default function DashboardPage() {
           image_url: !wishImageID && wishImageURL.trim() ? wishImageURL.trim() : undefined,
           price_source: wishPriceSource,
           note: wishNote.trim(),
+          saving_pot_id: linkedPotId,
         }),
       });
       setWishLink("");
@@ -617,6 +642,7 @@ export default function DashboardPage() {
       setWishImageID("");
       setWishPreviewURL("");
       setWishNote("");
+      setWishSavingPotChoice("");
       setWishPriceSource("manual");
       setSuccessMsg("Item wishlist berhasil disimpan.");
       await loadAllData();
@@ -627,13 +653,40 @@ export default function DashboardPage() {
     }
   };
 
-  const handleBuyWishlist = async (id: string) => {
+  const handleDepositWishlistPot = async (potId: string, itemId: string, itemName: string) => {
+    const amount = Number(wishDepositAmounts[itemId] || 0);
+    if (amount <= 0) {
+      setErrorMsg("Masukkan nominal setoran tabungan wishlist lebih dari 0.");
+      return;
+    }
+    try {
+      setErrorMsg("");
+      setSuccessMsg("");
+      await apiFetch(`/api/savings/${potId}/deposit`, {
+        method: "POST",
+        body: JSON.stringify({
+          amount,
+          date: new Date().toISOString().split("T")[0],
+          note: `Setor tabungan wishlist: ${itemName}`,
+        }),
+      });
+      setWishDepositAmounts((prev) => ({ ...prev, [itemId]: "" }));
+      setSuccessMsg(`Setoran tabungan wishlist ${itemName} berhasil dicatat.`);
+      await loadAllData();
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal menyetor ke tabungan wishlist."
+      );
+    }
+  };
+
+  const handleBuyWishlist = async (id: string, source: "bebas" | "pos" = "bebas") => {
     try {
       setErrorMsg("");
       setSuccessMsg("");
       await apiFetch(`/api/wishlist/${id}/buy`, {
         method: "POST",
-        body: JSON.stringify({ source: "bebas" }),
+        body: JSON.stringify({ source }),
       });
       setSuccessMsg("Pembelian wishlist berhasil dicatat.");
       await loadAllData();
@@ -669,8 +722,24 @@ export default function DashboardPage() {
     );
   }
 
+  const txMonths = Array.from(
+    new Set(transactions.map((t) => (t.date || "").slice(0, 7)).filter((m) => m.length === 7))
+  ).sort((a, b) => b.localeCompare(a));
+
+  const formatMonthLabel = (ym: string) => {
+    const [yr, mo] = ym.split("-");
+    const names = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+    ];
+    const idx = Number(mo) - 1;
+    return idx >= 0 && idx < 12 ? `${names[idx]} ${yr}` : ym;
+  };
+
   const filteredTransactions = transactions.filter((t) => {
     const matchesType = typeFilter === "all" || t.type === typeFilter;
+    const matchesMonth =
+      txMonthFilter === "all" || (t.date || "").startsWith(txMonthFilter);
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       !q ||
@@ -678,7 +747,45 @@ export default function DashboardPage() {
       t.party.toLowerCase().includes(q) ||
       t.source.toLowerCase().includes(q) ||
       t.note.toLowerCase().includes(q);
-    return matchesType && matchesSearch;
+    return matchesType && matchesMonth && matchesSearch;
+  });
+
+  const groupedTransactions = filteredTransactions.reduce<Record<string, Transaction[]>>(
+    (acc, t) => {
+      const key = (t.date || "").slice(0, 7) || "Lainnya";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(t);
+      return acc;
+    },
+    {}
+  );
+
+  const wishlistPotIds = new Set(
+    wishlistItems
+      .map((w) => w.saving_pot_id)
+      .filter((id): id is string => Boolean(id))
+  );
+  const isWishlistPot = (pot: SavingsPot) =>
+    wishlistPotIds.has(pot.id) || pot.name.toLowerCase().startsWith("wishlist:");
+
+  const filteredSavingsPots = savingsPots.filter((pot) => {
+    if (savingsFilter === "wishlist") return isWishlistPot(pot);
+    if (savingsFilter === "umum") return !isWishlistPot(pot);
+    return true;
+  });
+
+  const filteredWishlistItems = wishlistItems.filter((item) => {
+    const matchesPriority =
+      wishPriorityFilter === "all" || item.priority === wishPriorityFilter;
+    const matchesStatus =
+      wishStatusFilter === "all" || item.status === wishStatusFilter;
+    const q = wishSearch.toLowerCase();
+    const matchesSearch =
+      !q ||
+      item.name.toLowerCase().includes(q) ||
+      (item.note || "").toLowerCase().includes(q) ||
+      (item.situs || "").toLowerCase().includes(q);
+    return matchesPriority && matchesStatus && matchesSearch;
   });
 
   const activeDebtsSource =
@@ -979,6 +1086,18 @@ export default function DashboardPage() {
                     />
                   </div>
                   <select
+                    value={txMonthFilter}
+                    onChange={(e) => setTxMonthFilter(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="all">Semua Bulan</option>
+                    {txMonths.map((ym) => (
+                      <option key={ym} value={ym}>
+                        {formatMonthLabel(ym)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
                     value={typeFilter}
                     onChange={(e) =>
                       setTypeFilter(e.target.value as "all" | "masuk" | "keluar")
@@ -997,57 +1116,88 @@ export default function DashboardPage() {
                   Tidak ada transaksi yang cocok.
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 text-[#47544d] dark:text-[#a3b8ad]">
-                        <th className="py-2.5 font-medium">Tanggal</th>
-                        <th className="py-2.5 font-medium">Kategori</th>
-                        <th className="py-2.5 font-medium">Pihak / Sumber</th>
-                        <th className="py-2.5 font-medium">Catatan</th>
-                        <th className="py-2.5 font-medium text-right">Nominal</th>
-                        <th className="py-2.5 font-medium text-right">Saldo</th>
-                        <th className="py-2.5 font-medium text-right">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
-                      {filteredTransactions.map((t) => (
-                        <tr key={t.id} className="hover:bg-[#f7f8f7] dark:hover:bg-[#070a09]/50">
-                          <td className="py-3 font-mono num-tabular">{t.date}</td>
-                          <td className="py-3 font-medium">{t.category}</td>
-                          <td className="py-3 text-[#47544d] dark:text-[#a3b8ad]">
-                            {t.party || t.source || "-"}
-                          </td>
-                          <td className="py-3 text-[#47544d] dark:text-[#a3b8ad]">
-                            {t.note || "-"}
-                          </td>
-                          <td
-                            className={`py-3 text-right font-mono font-semibold num-tabular ${
-                              t.type === "masuk"
-                                ? "text-[#059669] dark:text-[#34d399]"
-                                : ""
-                            }`}
-                          >
-                            {t.type === "masuk" ? "+" : "-"}
-                            {formatRupiah(t.amount)}
-                          </td>
-                          <td className="py-3 text-right font-mono num-tabular text-[#47544d] dark:text-[#a3b8ad]">
-                            {formatRupiah(t.saldo_setelah)}
-                          </td>
-                          <td className="py-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteTransaction(t.id)}
-                              title="Hapus transaksi"
-                              className="p-1 text-[#47544d] hover:text-red-600 dark:text-[#a3b8ad] dark:hover:text-red-400 cursor-pointer"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-6">
+                  {Object.entries(groupedTransactions)
+                    .sort((a, b) => b[0].localeCompare(a[0]))
+                    .map(([ym, monthTxs]) => {
+                      const monthMasuk = monthTxs
+                        .filter((x) => x.type === "masuk")
+                        .reduce((s, x) => s + x.amount, 0);
+                      const monthKeluar = monthTxs
+                        .filter((x) => x.type === "keluar")
+                        .reduce((s, x) => s + x.amount, 0);
+
+                      return (
+                        <div key={ym} className="space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#f7f8f7] dark:bg-[#070a09] px-3.5 py-2 border border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+                            <span className="font-display text-sm tracking-tight">
+                              {formatMonthLabel(ym)} ({monthTxs.length})
+                            </span>
+                            <div className="flex items-center gap-4 text-xs font-mono num-tabular">
+                              <span className="text-[#059669] dark:text-[#34d399]">
+                                +{formatRupiah(monthMasuk)}
+                              </span>
+                              <span className="text-red-500">
+                                -{formatRupiah(monthKeluar)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                              <thead>
+                                <tr className="border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 text-[#47544d] dark:text-[#a3b8ad]">
+                                  <th className="py-2 font-medium">Tanggal</th>
+                                  <th className="py-2 font-medium">Kategori</th>
+                                  <th className="py-2 font-medium">Pihak / Sumber</th>
+                                  <th className="py-2 font-medium">Catatan</th>
+                                  <th className="py-2 font-medium text-right">Nominal</th>
+                                  <th className="py-2 font-medium text-right">Saldo</th>
+                                  <th className="py-2 font-medium text-right">Aksi</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
+                                {monthTxs.map((t) => (
+                                  <tr key={t.id} className="hover:bg-[#f7f8f7] dark:hover:bg-[#070a09]/50">
+                                    <td className="py-3 font-mono num-tabular">{t.date}</td>
+                                    <td className="py-3 font-medium">{t.category}</td>
+                                    <td className="py-3 text-[#47544d] dark:text-[#a3b8ad]">
+                                      {t.party || t.source || "-"}
+                                    </td>
+                                    <td className="py-3 text-[#47544d] dark:text-[#a3b8ad]">
+                                      {t.note || "-"}
+                                    </td>
+                                    <td
+                                      className={`py-3 text-right font-mono font-semibold num-tabular ${
+                                        t.type === "masuk"
+                                          ? "text-[#059669] dark:text-[#34d399]"
+                                          : ""
+                                      }`}
+                                    >
+                                      {t.type === "masuk" ? "+" : "-"}
+                                      {formatRupiah(t.amount)}
+                                    </td>
+                                    <td className="py-3 text-right font-mono num-tabular text-[#47544d] dark:text-[#a3b8ad]">
+                                      {formatRupiah(t.saldo_setelah)}
+                                    </td>
+                                    <td className="py-3 text-right">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteTransaction(t.id)}
+                                        title="Hapus transaksi"
+                                        className="p-1 text-[#47544d] hover:text-red-600 dark:text-[#a3b8ad] dark:hover:text-red-400 cursor-pointer"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>
@@ -1509,35 +1659,85 @@ export default function DashboardPage() {
                 </form>
               </div>
 
-              {savingsPots.length === 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="inline-flex rounded-lg border border-[#0b110e]/10 bg-white dark:border-[#f4f7f5]/10 dark:bg-[#0e1412] p-1 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSavingsFilter("all")}
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+                      savingsFilter === "all"
+                        ? "bg-[#10b981] text-[#070a09]"
+                        : "text-[#47544d] dark:text-[#a3b8ad]"
+                    }`}
+                  >
+                    Semua Pos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSavingsFilter("umum")}
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+                      savingsFilter === "umum"
+                        ? "bg-[#10b981] text-[#070a09]"
+                        : "text-[#47544d] dark:text-[#a3b8ad]"
+                    }`}
+                  >
+                    Tabungan Umum
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSavingsFilter("wishlist")}
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+                      savingsFilter === "wishlist"
+                        ? "bg-[#10b981] text-[#070a09]"
+                        : "text-[#47544d] dark:text-[#a3b8ad]"
+                    }`}
+                  >
+                    Tabungan Wishlist
+                  </button>
+                </div>
+              </div>
+
+              {filteredSavingsPots.length === 0 ? (
                 <div className={`py-12 text-center ${cardClass}`}>
                   <PiggyBank className="h-8 w-8 mx-auto text-[#47544d]/40 dark:text-[#a3b8ad]/40 mb-2" />
                   <p className="text-sm text-[#47544d] dark:text-[#a3b8ad]">
-                    Belum ada pos tabungan. Buat pos pertama Anda di atas.
+                    Belum ada pos tabungan untuk filter ini.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {savingsPots.map((pot) => {
+                  {filteredSavingsPots.map((pot) => {
                     const target = pot.target || 0;
                     const saldo = pot.saldo || 0;
                     const pct =
                       target > 0
                         ? Math.min(100, Math.round((saldo / target) * 100))
                         : 0;
+                    const isWishPot = isWishlistPot(pot);
                     return (
                       <div key={pot.id} className={`p-5 space-y-4 ${cardClass}`}>
-                        <div>
-                          <h3 className="font-semibold text-base">{pot.name}</h3>
-                          {pot.note && (
-                            <p className="text-xs text-[#47544d] dark:text-[#a3b8ad] mt-0.5">
-                              {pot.note}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h3 className="font-semibold text-base">{pot.name}</h3>
+                            {pot.note && (
+                              <p className="text-xs text-[#47544d] dark:text-[#a3b8ad] mt-0.5">
+                                {pot.note}
+                              </p>
+                            )}
+                            <p className="text-xs font-mono text-[#47544d] dark:text-[#a3b8ad] num-tabular mt-1">
+                              {formatRupiah(saldo)}
+                              {target > 0 ? ` / ${formatRupiah(target)} (${pct}%)` : ""}
                             </p>
-                          )}
-                          <p className="text-xs font-mono text-[#47544d] dark:text-[#a3b8ad] num-tabular mt-1">
-                            {formatRupiah(saldo)}
-                            {target > 0 ? ` / ${formatRupiah(target)} (${pct}%)` : ""}
-                          </p>
+                          </div>
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                              isWishPot
+                                ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                                : "bg-[#ecfdf5] text-[#059669] dark:bg-[#10b981]/15 dark:text-[#34d399]"
+                            }`}
+                          >
+                            {isWishPot ? "Tabungan Wishlist" : "Tabungan Umum"}
+                          </span>
                         </div>
                         <div className="h-2 w-full rounded-full bg-[#eef1ef] dark:bg-[#f4f7f5]/10 overflow-hidden">
                           <div
@@ -1733,7 +1933,23 @@ export default function DashboardPage() {
                     </label>
                   </div>
 
-                  <div className="sm:col-span-3 flex items-center gap-2">
+                  <div className="sm:col-span-4 flex items-center gap-2">
+                    <select
+                      value={wishSavingPotChoice}
+                      onChange={(e) => setWishSavingPotChoice(e.target.value)}
+                      className={`w-full ${inputClass}`}
+                    >
+                      <option value="">Tanpa Tabungan Wishlist</option>
+                      <option value="auto">+ Buat Pos Tabungan Wishlist Otomatis</option>
+                      {savingsPots.map((pot) => (
+                        <option key={pot.id} value={pot.id}>
+                          Hubungkan ke Pos: {pot.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-5 flex items-center gap-2">
                     {wishPreviewURL && !wishPreviewBroken && (
                       <img
                         src={wishPreviewURL}
@@ -1743,8 +1959,8 @@ export default function DashboardPage() {
                       />
                     )}
                     {wishPreviewURL && wishPreviewBroken && (
-                      <span className="text-[11px] text-amber-600 dark:text-amber-400">
-                        URL bukan gambar langsung, silakan Upload Foto
+                      <span className="text-[11px] text-[#47544d] dark:text-[#a3b8ad]">
+                        Foto tidak dapat dipratinjau (opsional).
                       </span>
                     )}
                   </div>
@@ -1758,93 +1974,209 @@ export default function DashboardPage() {
                 </form>
               </div>
 
-              {wishlistItems.length === 0 ? (
+              {/* Search & Priority Filters for Wishlist */}
+              <div className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${cardClass}`}>
+                <div className="relative flex-1">
+                  <Search className="h-3.5 w-3.5 text-[#47544d] dark:text-[#a3b8ad] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Cari barang wishlist, catatan, situs..."
+                    value={wishSearch}
+                    onChange={(e) => setWishSearch(e.target.value)}
+                    className={`w-full pl-9 ${inputClass}`}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={wishPriorityFilter}
+                    onChange={(e) =>
+                      setWishPriorityFilter(
+                        e.target.value as "all" | "tinggi" | "sedang" | "rendah"
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="all">Semua Prioritas</option>
+                    <option value="tinggi">Prioritas Tinggi</option>
+                    <option value="sedang">Prioritas Sedang</option>
+                    <option value="rendah">Prioritas Rendah</option>
+                  </select>
+                  <select
+                    value={wishStatusFilter}
+                    onChange={(e) =>
+                      setWishStatusFilter(
+                        e.target.value as "all" | "aktif" | "dibeli"
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="all">Semua Status</option>
+                    <option value="aktif">Aktif</option>
+                    <option value="dibeli">Sudah Dibeli</option>
+                  </select>
+                </div>
+              </div>
+
+              {filteredWishlistItems.length === 0 ? (
                 <div className={`py-12 text-center ${cardClass}`}>
                   <ShoppingBag className="h-8 w-8 mx-auto text-[#47544d]/40 dark:text-[#a3b8ad]/40 mb-2" />
                   <p className="text-sm text-[#47544d] dark:text-[#a3b8ad]">
-                    Belum ada item wishlist.
+                    Belum ada item wishlist yang cocok.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {wishlistItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`overflow-hidden flex flex-col justify-between ${cardClass}`}
-                    >
-                      {item.foto_url ? (
-                        <div className="aspect-[16/10] w-full bg-[#eef1ef] dark:bg-[#070a09] overflow-hidden border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
-                          <img
-                            src={item.foto_url}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="aspect-[16/10] w-full bg-[#eef1ef] dark:bg-[#070a09] flex items-center justify-center border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 text-[#47544d]/40 dark:text-[#a3b8ad]/40">
-                          <ShoppingBag className="h-8 w-8" />
-                        </div>
-                      )}
+                  {filteredWishlistItems.map((item) => {
+                    const hasPhoto = Boolean(item.foto_url) && !brokenWishlistImgs[item.id];
+                    const saldoPos = item.saldo_pos || 0;
+                    const wishPct =
+                      item.price > 0
+                        ? Math.min(100, Math.round((saldoPos / item.price) * 100))
+                        : 0;
 
-                      <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-                        <div>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs uppercase font-mono text-[#059669] dark:text-[#34d399]">
-                              {item.priority}
-                            </span>
-                            <span className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
-                              {item.status}
-                            </span>
+                    return (
+                      <div
+                        key={item.id}
+                        className={`overflow-hidden flex flex-col justify-between ${cardClass}`}
+                      >
+                        {hasPhoto && (
+                          <div className="aspect-[16/10] w-full bg-[#eef1ef] dark:bg-[#070a09] overflow-hidden border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+                            <img
+                              src={item.foto_url as string}
+                              alt={item.name}
+                              onError={() =>
+                                setBrokenWishlistImgs((prev) => ({
+                                  ...prev,
+                                  [item.id]: true,
+                                }))
+                              }
+                              className="w-full h-full object-cover"
+                            />
                           </div>
-                          <h3 className="mt-1 font-semibold text-base">
-                            {item.name}
-                          </h3>
-                          <p className="mt-1 font-mono text-lg font-bold num-tabular">
-                            {formatRupiah(item.price)}
-                          </p>
-                          {item.note && (
-                            <p className="mt-1 text-xs text-[#47544d] dark:text-[#a3b8ad]">
-                              {item.note}
+                        )}
+
+                        <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs uppercase font-mono text-[#059669] dark:text-[#34d399]">
+                                {item.priority}
+                              </span>
+                              <span className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                                {item.status}
+                              </span>
+                            </div>
+                            <h3 className="mt-1 font-semibold text-base">
+                              {item.name}
+                            </h3>
+                            <p className="mt-1 font-mono text-lg font-bold num-tabular">
+                              {formatRupiah(item.price)}
                             </p>
-                          )}
-                          {item.link && (
-                            <a
-                              href={item.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#059669] dark:text-[#34d399] hover:underline"
-                            >
-                              <span>{item.situs || "Buka Link Produk"}</span>
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
-                          {item.status === "aktif" ? (
+                            {item.note && (
+                              <p className="mt-1 text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                                {item.note}
+                              </p>
+                            )}
+                            {item.link && (
+                              <a
+                                href={item.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#059669] dark:text-[#34d399] hover:underline"
+                              >
+                                <span>{item.situs || "Buka Link Produk"}</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+
+                            {/* Linked Tabungan Wishlist */}
+                            {item.saving_pot_id && item.status === "aktif" && (
+                              <div className="mt-3 rounded-lg border border-[#10b981]/25 bg-[#f7f8f7] dark:bg-[#070a09] p-3 space-y-2">
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="font-semibold text-[#059669] dark:text-[#34d399]">
+                                    Tabungan Wishlist: {item.saving_pot_name}
+                                  </span>
+                                  <span className="font-mono num-tabular">
+                                    {wishPct}%
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full rounded-full bg-[#0b110e]/10 dark:bg-[#f4f7f5]/10 overflow-hidden">
+                                  <div
+                                    className="h-full bg-[#10b981]"
+                                    style={{ width: `${wishPct}%` }}
+                                  />
+                                </div>
+                                <div className="text-[11px] font-mono text-[#47544d] dark:text-[#a3b8ad] num-tabular">
+                                  Terkumpul: {formatRupiah(saldoPos)}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    placeholder="Setor (Rp)"
+                                    value={wishDepositAmounts[item.id] || ""}
+                                    onChange={(e) =>
+                                      setWishDepositAmounts((prev) => ({
+                                        ...prev,
+                                        [item.id]: e.target.value,
+                                      }))
+                                    }
+                                    className={`flex-1 min-w-0 ${inputClass}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDepositWishlistPot(
+                                        item.saving_pot_id as string,
+                                        item.id,
+                                        item.name
+                                      )
+                                    }
+                                    className="rounded-lg bg-[#10b981] px-2.5 py-1.5 text-[11px] font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
+                                  >
+                                    Setor
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+                            {item.status === "aktif" ? (
+                              <div className="flex-1 flex flex-wrap gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleBuyWishlist(item.id, "bebas")}
+                                  className="flex-1 rounded-lg bg-[#10b981] py-1.5 px-2 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
+                                >
+                                  Beli (Saldo)
+                                </button>
+                                {item.saving_pot_id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleBuyWishlist(item.id, "pos")}
+                                    className="rounded-lg border border-[#10b981] py-1.5 px-2 text-[11px] font-semibold text-[#059669] dark:text-[#34d399] hover:bg-[#10b981]/10 cursor-pointer"
+                                  >
+                                    Pakai Pos
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs font-medium text-[#059669] dark:text-[#34d399]">
+                                Sudah Dibeli
+                              </span>
+                            )}
                             <button
                               type="button"
-                              onClick={() => handleBuyWishlist(item.id)}
-                              className="flex-1 rounded-lg bg-[#10b981] py-1.5 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
+                              onClick={() => handleDeleteWishlist(item.id)}
+                              title="Hapus wishlist"
+                              className="p-1.5 text-[#47544d] hover:text-red-600 dark:text-[#a3b8ad] dark:hover:text-red-400 cursor-pointer"
                             >
-                              Beli Sekarang
+                              <Trash2 className="h-4 w-4" />
                             </button>
-                          ) : (
-                            <span className="text-xs font-medium text-[#059669] dark:text-[#34d399]">
-                              Sudah Dibeli
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteWishlist(item.id)}
-                            title="Hapus wishlist"
-                            className="p-1.5 text-[#47544d] hover:text-red-600 dark:text-[#a3b8ad] dark:hover:text-red-400 cursor-pointer"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -168,7 +168,7 @@ export function Header({
         </div>
 
         {/* Bottom Action + Theme + Logout */}
-        <div className="p-3 border-t border-[#0b110e]/10 dark:border-[#f4f7f5]/10 space-y-3">
+        <div className="p-3 pb-16 border-t border-[#0b110e]/10 dark:border-[#f4f7f5]/10 space-y-3">
           <button
             type="button"
             onClick={onOpenModal}
