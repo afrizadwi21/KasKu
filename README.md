@@ -22,7 +22,8 @@ Dibangun menggunakan **Golang** dan **Fiber**, terintegrasi dengan database **Po
   - [6. Hutang & Piutang](#6-hutang--piutang)
   - [7. Langganan Rutin](#7-langganan-rutin)
   - [8. Tagihan Sekali Bayar](#8-tagihan-sekali-bayar)
-  - [9. Pengaturan, Ekspor CSV & Meta Autocomplete](#9-pengaturan-ekspor-csv--meta-autocomplete)
+  - [9. Pos Tabungan / Uang Disisihkan (`/api/savings/*`)](#9-pos-tabungan--uang-disisihkan-apisavings)
+  - [10. Pengaturan, Ekspor CSV & Meta Autocomplete](#10-pengaturan-ekspor-csv--meta-autocomplete)
 
 ---
 
@@ -487,7 +488,142 @@ curl -X POST http://localhost:8080/api/bills/<BILL_ID>/pay \
 
 ---
 
-### 9. Pengaturan, Ekspor CSV & Meta Autocomplete
+### 9. Pos Tabungan / Uang Disisihkan (`/api/savings/*`)
+
+Fitur Pos Tabungan memungkinkan pengguna menyisihkan uang untuk tujuan tertentu (misal: "Dana Darurat", "Beli HP", "Liburan").
+
+#### Konsep Saldo Total vs Saldo Bebas:
+- **`saldo_total`**: Total seluruh uang fisik/rekening Anda (`opening_balance + sum(masuk) - sum(keluar)`). Menyisihkan uang **TIDAK** mengubah saldo total.
+- **`total_tersimpan`**: Jumlah akumulasi saldo di seluruh pos tabungan aktif (`sum(setor) - sum(tarik) - sum(pakai)`).
+- **`saldo_bebas`**: `saldo_total - total_tersimpan`. Inilah uang bebas / uang jajan yang aman dibelanjakan.
+- **`jatah_harian`**: `saldo_bebas / sisa_hari_bulan_ini` (termasuk hari ini).
+- Menyisihkan atau menarik uang dari tabungan adalah **perpindahan internal**, disimpan pada tabel `savings_movements` (bukan di `transactions`), sehingga laporan arus kas pemasukan dan pengeluaran tetap bersih.
+
+#### Alur Contoh Penggunaan:
+1. **Buat Pos Baru**: misal "Dana Darurat" dengan target Rp 1.000.000.
+2. **Setor Uang**: Setor Rp 20.000 dari saldo bebas ke pos tersebut -> `saldo_total` tetap, `total_tersimpan` jadi 20.000, `saldo_bebas` berkurang 20.000.
+3. **Lihat Overview / Today**: Cek jatah harian dan saldo bebas saat ini.
+4. **Tarik atau Belanja (Spend)**: Uang tabungan dapat ditarik kembali ke saldo bebas atau langsung dibelanjakan untuk kategori pengeluaran tertentu.
+
+#### Daftar Semua Pos Tabungan (`GET /api/savings`)
+```bash
+curl -X GET http://localhost:8080/api/savings \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Buat Pos Tabungan Baru (`POST /api/savings`)
+```bash
+curl -X POST http://localhost:8080/api/savings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "name": "Dana Darurat",
+    "target_amount": 1000000,
+    "deadline": "2027-11-26",
+    "note": "Cadangan biaya tak terduga"
+  }'
+```
+
+#### Detail Pos & Riwayat Mutasi (`GET /api/savings/:id`)
+```bash
+curl -X GET http://localhost:8080/api/savings/<POT_ID> \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Ubah Detail Pos Tabungan (`PUT /api/savings/:id`)
+```bash
+curl -X PUT http://localhost:8080/api/savings/<POT_ID> \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "name": "Dana Darurat & Medis",
+    "target_amount": 1500000,
+    "deadline": "2027-12-31",
+    "note": "Diperbarui untuk proteksi keluarga"
+  }'
+```
+
+#### Setor ke Pos Tabungan (`POST /api/savings/:id/deposit`)
+> Mengurangi `saldo_bebas`, menambah saldo pos. Ditolak jika `amount > saldo_bebas`.
+```bash
+curl -X POST http://localhost:8080/api/savings/<POT_ID>/deposit \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "amount": 20000,
+    "date": "2026-11-26",
+    "note": "Setoran awal"
+  }'
+```
+
+#### Tarik Kembali ke Saldo Bebas (`POST /api/savings/:id/withdraw`)
+> Menambah `saldo_bebas`, mengurangi saldo pos. Ditolak jika `amount > saldo_pos`.
+```bash
+curl -X POST http://localhost:8080/api/savings/<POT_ID>/withdraw \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "amount": 5000,
+    "date": "2026-11-26",
+    "note": "Tarik untuk keperluan mendesak"
+  }'
+```
+
+#### Pakai Uang Tabungan untuk Belanja (`POST /api/savings/:id/spend`)
+> Membuat transaksi pengeluaran dan mencatat mutasi `pakai`. Mengurangi `saldo_total` dan `saldo_pos`. `saldo_bebas` tidak berubah.
+```bash
+curl -X POST http://localhost:8080/api/savings/<POT_ID>/spend \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "amount": 8000,
+    "date": "2026-11-26",
+    "category": "Pengeluaran Lain",
+    "party": "Apotek Sehat",
+    "note": "Beli obat darurat",
+    "items": [
+      { "name": "Vitamin C", "qty": 1, "unit_price": 8000 }
+    ]
+  }'
+```
+
+#### Tutup & Arsipkan Pos Tabungan (`POST /api/savings/:id/close`)
+> Mengembalikan seluruh sisa saldo pos otomatis ke `saldo_bebas` dan mengubah status `archived = true`.
+```bash
+curl -X POST http://localhost:8080/api/savings/<POT_ID>/close \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Hapus Pos Tabungan Permanen (`DELETE /api/savings/:id`)
+> Hanya diperbolehkan jika pos bersaldo 0 dan belum pernah memiliki riwayat mutasi. Jika sudah ada riwayat, API mengembalikan status 409 dengan anjuran menggunakan `/close`.
+```bash
+curl -X DELETE http://localhost:8080/api/savings/<POT_ID> \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Batalkan Mutasi Tabungan (`DELETE /api/savings/movements/:id`)
+> Membatalkan setor/tarik. Jika membatalkan mutasi `pakai`, transaksi belanja keluar yang terkait akan otomatis ikut terhapus secara atomik.
+```bash
+curl -X DELETE http://localhost:8080/api/savings/movements/<MOVEMENT_ID> \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Riwayat Semua Mutasi Tabungan (`GET /api/savings/movements`)
+```bash
+curl -X GET "http://localhost:8080/api/savings/movements?pot_id=<POT_ID>&from=2026-11-01&to=2026-11-30" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Ekspor Mutasi Tabungan ke CSV (`GET /api/export-savings.csv`)
+```bash
+curl -X GET http://localhost:8080/api/export-savings.csv \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -o mutasi_tabungan_kasku.csv
+```
+
+---
+
+### 10. Pengaturan, Ekspor CSV & Meta Autocomplete
 
 #### Ambil Saldo Awal Pengguna (`GET /api/settings/opening-balance`)
 ```bash

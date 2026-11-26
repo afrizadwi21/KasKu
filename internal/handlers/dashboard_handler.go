@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"math"
 	"time"
 
@@ -84,6 +85,18 @@ func (h *Handler) GetToday(c *fiber.Ctx) error {
 	selisihHariIni := masukHariIni - keluarHariIni
 	saldoSekarang := saldoAwalHari + selisihHariIni
 
+	// Hitung total_tersimpan dan mutasi tabungan hari ini
+	var setoranTabunganHariIni, penarikanTabunganHariIni int64
+	_ = h.DB.QueryRow(`
+		SELECT 
+			COALESCE(SUM(CASE WHEN type = 'setor' THEN amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN type = 'tarik' THEN amount ELSE 0 END), 0)
+		FROM savings_movements
+		WHERE user_id = $1 AND date = $2
+	`, userID, todayStr).Scan(&setoranTabunganHariIni, &penarikanTabunganHariIni)
+
+	_, totalTersimpan, saldoBebasSekarang, _ := h.GetBalances(context.Background(), nil, userID)
+
 	pemasukanPerSumber := make([]srcSummary, 0)
 	for s, tot := range sumberMap {
 		pemasukanPerSumber = append(pemasukanPerSumber, srcSummary{
@@ -99,6 +112,10 @@ func (h *Handler) GetToday(c *fiber.Ctx) error {
 		"jumlah_transaksi":              len(transaksiList),
 		"saldo_awal_hari":               saldoAwalHari,
 		"saldo_sekarang":                saldoSekarang,
+		"saldo_bebas_sekarang":          saldoBebasSekarang,
+		"total_tersimpan":               totalTersimpan,
+		"setoran_tabungan_hari_ini":     setoranTabunganHariIni,
+		"penarikan_tabungan_hari_ini":   penarikanTabunganHariIni,
 		"selisih_hari_ini":              selisihHariIni,
 		"pemasukan_per_sumber_hari_ini": pemasukanPerSumber,
 		"transaksi":                     transaksiList,
@@ -215,8 +232,18 @@ func (h *Handler) GetOverview(c *fiber.Ctx) error {
 	// 5. Kekayaan Bersih
 	kekayaanBersih := calc.CalculateKekayaanBersih(saldo, piutangTotal, hutangSayaTotal, langgananBelumDibayarTotal, tagihanBelumDibayarTotal)
 
+	// Hitung saldo total, total tersimpan, saldo bebas, dan jatah harian
+	saldoTotal, totalTersimpan, saldoBebas, _ := h.GetBalances(context.Background(), nil, userID)
+	sisaHariBulanIni := calc.SisaHariBulanIni(today)
+	jatahHarian := calc.CalculateJatahHarian(saldoBebas, sisaHariBulanIni)
+
 	return c.JSON(fiber.Map{
-		"saldo":                saldo,
+		"saldo":                saldoTotal,
+		"saldo_total":          saldoTotal,
+		"total_tersimpan":      totalTersimpan,
+		"saldo_bebas":          saldoBebas,
+		"sisa_hari_bulan_ini":  sisaHariBulanIni,
+		"jatah_harian":         jatahHarian,
 		"piutang_total":        piutangTotal,
 		"hutang_saya_total":    hutangSayaTotal,
 		"belum_dibayar_total":  belumDibayarTotal,
@@ -443,12 +470,42 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 
 	rataRataKeluarPerHari := int64(math.Round(float64(totalKeluar) / float64(daysDiff)))
 
+	// Hitung mutasi tabungan periode dan saldo bebas akhir periode
+	var setorPeriode, tarikPeriode, pakaiPeriode int64
+	_ = h.DB.QueryRow(`
+		SELECT 
+			COALESCE(SUM(CASE WHEN type = 'setor' THEN amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN type = 'tarik' THEN amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN type = 'pakai' THEN amount ELSE 0 END), 0)
+		FROM savings_movements
+		WHERE user_id = $1 AND date >= $2 AND date <= $3
+	`, userID, fromStr, toStr).Scan(&setorPeriode, &tarikPeriode, &pakaiPeriode)
+
+	// Total tersimpan s/d toDate
+	var totalTersimpanSampaiToDate int64
+	_ = h.DB.QueryRow(`
+		SELECT 
+			COALESCE(SUM(CASE WHEN sm.type = 'setor' THEN sm.amount ELSE 0 END), 0) -
+			COALESCE(SUM(CASE WHEN sm.type IN ('tarik', 'pakai') THEN sm.amount ELSE 0 END), 0)
+		FROM savings_movements sm
+		JOIN savings_pots sp ON sm.pot_id = sp.id
+		WHERE sm.user_id = $1 AND sm.date <= $2 AND sp.archived = false
+	`, userID, toStr).Scan(&totalTersimpanSampaiToDate)
+
+	saldoBebasAkhirPeriode := saldoAkhirPeriode - totalTersimpanSampaiToDate
+
 	return c.JSON(fiber.Map{
 		"total_masuk":              totalMasuk,
 		"total_keluar":             totalKeluar,
 		"selisih":                  selisih,
 		"saldo_awal_periode":       saldoAwalPeriode,
 		"saldo_akhir_periode":      saldoAkhirPeriode,
+		"saldo_bebas_akhir_periode": saldoBebasAkhirPeriode,
+		"perpindahan_tabungan_periode": fiber.Map{
+			"setor": setorPeriode,
+			"tarik": tarikPeriode,
+			"pakai": pakaiPeriode,
+		},
 		"pengeluaran_per_kategori": pengeluaranPerKategori,
 		"pemasukan_per_sumber":     pemasukanPerSumber,
 		"barang_teratas":           barangTeratas,

@@ -70,9 +70,23 @@ func (h *Handler) RegisterRoutes(app *fiber.App) {
 	api.Delete("/bills/:id", h.DeleteBill)
 	api.Post("/bills/:id/pay", h.PayBill)
 
-	// 7. Pengaturan, Ekspor, dan Meta
+	// 7. Tabungan / Pos Tabungan (Savings)
+	api.Get("/savings", h.GetSavings)
+	api.Post("/savings", h.CreateSavingsPot)
+	api.Get("/savings/movements", h.GetSavingsMovements)
+	api.Delete("/savings/movements/:id", h.CancelSavingsMovement)
+	api.Get("/savings/:id", h.GetSavingsPotByID)
+	api.Put("/savings/:id", h.UpdateSavingsPot)
+	api.Delete("/savings/:id", h.DeleteSavingsPot)
+	api.Post("/savings/:id/deposit", h.DepositSavings)
+	api.Post("/savings/:id/withdraw", h.WithdrawSavings)
+	api.Post("/savings/:id/spend", h.SpendSavings)
+	api.Post("/savings/:id/close", h.CloseSavingsPot)
+
+	// 8. Pengaturan, Ekspor, dan Meta
 	api.Get("/settings/opening-balance", h.GetOpeningBalanceSetting)
 	api.Put("/settings/opening-balance", h.UpdateOpeningBalanceSetting)
 	api.Get("/export.csv", h.ExportCSV)
+	api.Get("/export-savings.csv", h.ExportSavingsCSV)
 	api.Get("/meta", h.GetMeta)
 }

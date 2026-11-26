@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"time"
@@ -219,5 +220,24 @@ func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
 		return unpaidItems[i].Jumlah > unpaidItems[j].Jumlah
 	})
 
-	return c.JSON(unpaidItems)
+	// Hitung total belum dibayar (langganan + tagihan jatuh tempo / belum dibayar)
+	var totalBelumDibayarLanggananTagihan int64
+	for _, it := range unpaidItems {
+		if it.Jenis == "langganan" || it.Jenis == "tagihan" {
+			totalBelumDibayarLanggananTagihan += it.Jumlah
+		}
+	}
+
+	_, _, saldoBebas, _ := h.GetBalances(context.Background(), nil, userID)
+	var peringatan string
+	if totalBelumDibayarLanggananTagihan > saldoBebas {
+		peringatan = "Peringatan: Total kewajiban belum dibayar (langganan & tagihan) melebihi saldo bebas Anda saat ini."
+	}
+
+	return c.JSON(fiber.Map{
+		"items":                                 unpaidItems,
+		"total_belum_dibayar_langganan_tagihan": totalBelumDibayarLanggananTagihan,
+		"saldo_bebas":                           saldoBebas,
+		"peringatan":                            peringatan,
+	})
 }

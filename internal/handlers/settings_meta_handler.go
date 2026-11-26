@@ -135,14 +135,79 @@ func (h *Handler) GetMeta(c *fiber.Ctx) error {
 		}
 	}
 
+	// Pos tabungan
+	potRows, err := h.DB.Query("SELECT DISTINCT TRIM(name) FROM savings_pots WHERE user_id = $1 AND archived = false ORDER BY TRIM(name) ASC", userID)
+	posTabungan := make([]string, 0)
+	if err == nil {
+		defer potRows.Close()
+		for potRows.Next() {
+			var p string
+			if err := potRows.Scan(&p); err == nil && p != "" {
+				posTabungan = append(posTabungan, p)
+			}
+		}
+	}
+
 	return c.JSON(fiber.Map{
 		"kategori": fiber.Map{
 			"masuk":  calc.ValidMasukCategories,
 			"keluar": calc.ValidKeluarCategories,
 		},
-		"party":  parties,
-		"source": sources,
+		"party":        parties,
+		"source":       sources,
+		"pos_tabungan": posTabungan,
 	})
+}
+
+// ExportSavingsCSV menangani GET /api/export-savings.csv
+func (h *Handler) ExportSavingsCSV(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	rows, err := h.DB.Query(`
+		SELECT sm.id, sm.date, sp.name, sm.type, sm.amount, sm.note, COALESCE(sm.transaction_id::text, '')
+		FROM savings_movements sm
+		JOIN savings_pots sp ON sm.pot_id = sp.id
+		WHERE sm.user_id = $1
+		ORDER BY sm.date ASC, sm.created_at ASC, sm.id ASC
+	`, userID)
+	if err != nil {
+		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menyiapkan data ekspor CSV tabungan")
+	}
+	defer rows.Close()
+
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+
+	header := []string{"ID Mutasi", "Tanggal", "Pos Tabungan", "Jenis Mutasi", "Nominal", "Keterangan", "ID Transaksi Belanja"}
+	if err := writer.Write(header); err != nil {
+		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menulis header CSV")
+	}
+
+	for rows.Next() {
+		var id, dateVal, potName, movType, note, txID string
+		var amount int64
+		if err := rows.Scan(&id, &dateVal, &potName, &movType, &amount, &note, &txID); err != nil {
+			continue
+		}
+		record := []string{
+			id,
+			dateVal[:10],
+			potName,
+			movType,
+			strconv.FormatInt(amount, 10),
+			note,
+			txID,
+		}
+		_ = writer.Write(record)
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghasilkan konten CSV")
+	}
+
+	c.Set("Content-Type", "text/csv; charset=utf-8")
+	c.Set("Content-Disposition", "attachment; filename=kasku_tabungan.csv")
+	return c.Send(buf.Bytes())
 }
 
 // Healthz menangani GET /healthz

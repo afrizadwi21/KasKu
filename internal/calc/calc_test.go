@@ -243,3 +243,45 @@ func TestCategoryValidation(t *testing.T) {
 		t.Error("Makanan & Minuman harus valid untuk keluar")
 	}
 }
+
+func TestSavingsCalculations(t *testing.T) {
+	// Saldo Bebas: saldoTotal 65353, tersimpan 20000 -> saldo_bebas = 45353
+	saldoTotal := int64(65353)
+	tersimpan := int64(20000)
+	saldoBebas := calc.CalculateSaldoBebas(saldoTotal, tersimpan)
+	if saldoBebas != 45353 {
+		t.Fatalf("Ekspektasi saldo bebas 45353, didapat %d", saldoBebas)
+	}
+
+	// Saldo Pos: setor 30000, tarik 5000, pakai 8000 -> 17000
+	d := time.Date(2026, 11, 26, 0, 0, 0, 0, time.UTC)
+	movements := []calc.SavingsMovementMinimal{
+		{Type: "setor", Amount: 30000, Date: d},
+		{Type: "tarik", Amount: 5000, Date: d},
+		{Type: "pakai", Amount: 8000, Date: d},
+	}
+	saldoPos := calc.CalculateSaldoPos(movements)
+	if saldoPos != 17000 {
+		t.Fatalf("Ekspektasi saldo pos 17000, didapat %d", saldoPos)
+	}
+
+	// Jatah Harian: saldo_bebas 45353, sisa 5 hari (26, 27, 28, 29, 30 Nov) -> 45353 / 5 = 9070
+	refDate := time.Date(2026, 11, 26, 10, 0, 0, 0, time.UTC)
+	sisaHari := calc.SisaHariBulanIni(refDate)
+	if sisaHari != 5 {
+		t.Fatalf("Ekspektasi sisa hari 5 (26-30 Nov), didapat %d", sisaHari)
+	}
+	jatah := calc.CalculateJatahHarian(45353, sisaHari)
+	if jatah != 9070 {
+		t.Fatalf("Ekspektasi jatah harian 9070, didapat %d", jatah)
+	}
+
+	// Perlu setor per bulan:
+	// Target 1.000.000, Saldo 20.000, sisa 980.000. Deadline 2027-01-26 (~2 bulan).
+	dl := time.Date(2027, 1, 26, 0, 0, 0, 0, time.UTC)
+	perlu := calc.CalculatePerluSetorPerBulan(1000000, 20000, &dl, refDate)
+	if perlu != 490000 {
+		t.Fatalf("Ekspektasi perlu setor per bulan 490000, didapat %d", perlu)
+	}
+}
+

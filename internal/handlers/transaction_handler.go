@@ -30,6 +30,7 @@ type TransactionInput struct {
 	Note     string      `json:"note"`
 	Amount   int64       `json:"amount"`
 	Items    []ItemInput `json:"items"`
+	Force    bool        `json:"force"`
 }
 
 type ItemResponse struct {
@@ -386,6 +387,16 @@ func (h *Handler) CreateTransaction(c *fiber.Ctx) error {
 		return ErrorResponse(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
+	// Validasi saldo bebas untuk transaksi keluar (jika tanggal >= hari ini dan bukan force)
+	todayStr := time.Now().Format("2006-01-02")
+	txDateStr := parsedDate.Format("2006-01-02")
+	if input.Type == "keluar" && txDateStr >= todayStr && !input.Force {
+		_, _, saldoBebas, errBal := h.GetBalances(context.Background(), nil, userID)
+		if errBal == nil && finalAmount > saldoBebas {
+			return ErrorResponse(c, fiber.StatusUnprocessableEntity, "Saldo bebas tidak cukup. Tarik dari tabungan dulu atau kirim force=true")
+		}
+	}
+
 	ctx := context.Background()
 	tx, err := h.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -442,6 +453,16 @@ func (h *Handler) UpdateTransaction(c *fiber.Ctx) error {
 	parsedDate, finalAmount, preparedItems, err := validateAndPrepareTx(&input)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	// Validasi saldo bebas untuk transaksi keluar (jika tanggal >= hari ini dan bukan force)
+	todayStr := time.Now().Format("2006-01-02")
+	txDateStr := parsedDate.Format("2006-01-02")
+	if input.Type == "keluar" && txDateStr >= todayStr && !input.Force {
+		_, _, saldoBebas, errBal := h.GetBalances(context.Background(), nil, userID)
+		if errBal == nil && finalAmount > saldoBebas {
+			return ErrorResponse(c, fiber.StatusUnprocessableEntity, "Saldo bebas tidak cukup. Tarik dari tabungan dulu atau kirim force=true")
+		}
 	}
 
 	ctx := context.Background()
@@ -501,6 +522,13 @@ func (h *Handler) DeleteTransaction(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID transaksi tidak valid")
+	}
+
+	// Cek apakah transaksi ini terhubung ke savings_movements (type 'pakai')
+	var hasSavingsMovement bool
+	err := h.DB.QueryRow("SELECT true FROM savings_movements WHERE transaction_id = $1 AND user_id = $2", id, userID).Scan(&hasSavingsMovement)
+	if err == nil && hasSavingsMovement {
+		return ErrorResponse(c, fiber.StatusConflict, "Transaksi ini berasal dari tabungan, batalkan lewat riwayat tabungan")
 	}
 
 	result, err := h.DB.Exec("DELETE FROM transactions WHERE id = $1 AND user_id = $2", id, userID)

@@ -398,3 +398,93 @@ func CalculateIncomeBySource(txs []TransactionMinimal) []SourceSummary {
 	}
 	return results
 }
+
+// SavingsMovementMinimal data model minimal untuk riwayat tabungan
+type SavingsMovementMinimal struct {
+	Type   string
+	Amount int64
+	Date   time.Time
+}
+
+// SaldoBebas = saldoTotal - totalTersimpan
+func CalculateSaldoBebas(saldoTotal int64, totalTersimpan int64) int64 {
+	return saldoTotal - totalTersimpan
+}
+
+// SaldoPos = sum(setor) - sum(tarik) - sum(pakai)
+func CalculateSaldoPos(movements []SavingsMovementMinimal) int64 {
+	var saldo int64
+	for _, m := range movements {
+		switch m.Type {
+		case "setor":
+			saldo += m.Amount
+		case "tarik", "pakai":
+			saldo -= m.Amount
+		}
+	}
+	return saldo
+}
+
+// SisaHariBulanIni menghitung sisa hari pada bulan dari tanggal refDate (inklusif hari ini)
+func SisaHariBulanIni(refDate time.Time) int {
+	year, month, _ := refDate.Date()
+	firstOfNextMonth := time.Date(year, month+1, 1, 0, 0, 0, 0, refDate.Location())
+	lastDayOfMonth := firstOfNextMonth.AddDate(0, 0, -1).Day()
+	remaining := lastDayOfMonth - refDate.Day() + 1
+	if remaining < 1 {
+		return 1
+	}
+	return remaining
+}
+
+// JatahHarian = saldoBebas / sisaHariBulanIni (termasuk hari ini); 0 jika saldoBebas <= 0
+func CalculateJatahHarian(saldoBebas int64, sisaHari int) int64 {
+	if saldoBebas <= 0 || sisaHari <= 0 {
+		return 0
+	}
+	return saldoBebas / int64(sisaHari)
+}
+
+// PerluSetorPerBulan: (target - saldo) / sisaBulan (minimal 1)
+// Jika target <= 0 atau saldo >= target, kembalikan 0.
+// sisaBulan dihitung dari refDate ke deadline (minimal 1 bulan).
+func CalculatePerluSetorPerBulan(target int64, saldo int64, deadline *time.Time, refDate time.Time) int64 {
+	if target <= 0 || saldo >= target || deadline == nil {
+		return 0
+	}
+	sisaTarget := target - saldo
+	if sisaTarget <= 0 {
+		return 0
+	}
+
+	// Hitung perkiraan sisa bulan
+	// Minimal 1
+	refDay := TruncateToDay(refDate)
+	dlDay := TruncateToDay(*deadline)
+	if !dlDay.After(refDay) {
+		return sisaTarget
+	}
+
+	yearDiff := dlDay.Year() - refDay.Year()
+	monthDiff := int(dlDay.Month()) - int(refDay.Month())
+	totalMonths := yearDiff*12 + monthDiff
+
+	// Jika masih dalam bulan yang sama atau selisih <= 0
+	if totalMonths < 1 {
+		totalMonths = 1
+	}
+
+	return int64(math.Ceil(float64(sisaTarget) / float64(totalMonths)))
+}
+
+// SisaHariDeadline menghitung sisa hari dari refDate ke deadline
+func CalculateSisaHariDeadline(deadline *time.Time, refDate time.Time) *int {
+	if deadline == nil {
+		return nil
+	}
+	refDay := TruncateToDay(refDate)
+	dlDay := TruncateToDay(*deadline)
+	diff := int(dlDay.Sub(refDay).Hours() / 24)
+	return &diff
+}
+

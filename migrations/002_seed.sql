@@ -56,5 +56,16 @@ BEGIN
     -- 8. Langganan Domain Tahunan (First due 2026-11-26)
     INSERT INTO subscriptions (user_id, name, amount, cycle, first_due, active, created_at)
     VALUES (v_user_id, 'Domain', 3300, 'tahunan', '2026-11-26', true, '2026-11-26 07:00:00+07');
+
+    -- 9. Pos Tabungan "Dana Darurat" target 1.000.000 dengan setoran 20.000 pada 2026-11-26
+    DECLARE
+        v_pot_id UUID := gen_random_uuid();
+    BEGIN
+        INSERT INTO savings_pots (id, user_id, name, target_amount, deadline, note, archived, created_at)
+        VALUES (v_pot_id, v_user_id, 'Dana Darurat', 1000000, '2027-11-26', 'Simpanan dana darurat', false, '2026-11-26 07:30:00+07');
+
+        INSERT INTO savings_movements (user_id, pot_id, type, amount, date, note, created_at)
+        VALUES (v_user_id, v_pot_id, 'setor', 20000, '2026-11-26', 'Setoran awal dana darurat', '2026-11-26 08:30:00+07');
+    END;
 END;
 $$ LANGUAGE plpgsql;
