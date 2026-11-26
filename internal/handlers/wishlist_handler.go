@@ -132,7 +132,7 @@ func (h *Handler) GetWishlist(c *fiber.Ctx) error {
 	query := fmt.Sprintf(`
 		SELECT 
 			w.id, w.name, w.price, w.priority, w.category, w.link, w.link_resolved, w.source_site, w.price_source,
-			w.image_id, w.note, w.target_date, 
+			w.image_id, COALESCE(w.image_url, ''), w.note, w.target_date, 
 			w.status, w.saving_pot_id, sp.name AS saving_pot_name,
 			COALESCE(
 				(SELECT SUM(CASE WHEN sm.type = 'setor' THEN sm.amount ELSE -sm.amount END)
@@ -170,12 +170,13 @@ func (h *Handler) GetWishlist(c *fiber.Ctx) error {
 		var it WishlistItemResponse
 		var targetDate, boughtAt sql.NullTime
 		var savingPotID, savingPotName, boughtTxID, imageID sql.NullString
+		var fallbackImageURL string
 		var saldoPos sql.NullInt64
 		var createdAt time.Time
 
 		err := rows.Scan(
 			&it.ID, &it.Name, &it.Price, &it.Priority, &it.Category, &it.Link, &it.LinkAkhir, &it.Situs, &it.PriceSource,
-			&imageID, &it.Note, &targetDate, &it.Status, &savingPotID, &savingPotName, &saldoPos,
+			&imageID, &fallbackImageURL, &it.Note, &targetDate, &it.Status, &savingPotID, &savingPotName, &saldoPos,
 			&boughtAt, &boughtTxID, &createdAt,
 		)
 		if err != nil {
@@ -204,6 +205,10 @@ func (h *Handler) GetWishlist(c *fiber.Ctx) error {
 			fURL := media.GenerateSignedImageURL(baseURL, imgID, jwtSecret, 1*time.Hour)
 			it.FotoURL = &fURL
 			it.FotoThumbURL = &fURL // Sisi terpanjang 800px responsif / URL bertanda tangan
+		} else if strings.TrimSpace(fallbackImageURL) != "" {
+			fURL := strings.TrimSpace(fallbackImageURL)
+			it.FotoURL = &fURL
+			it.FotoThumbURL = &fURL
 		}
 
 		if it.Situs == "" && it.Link != "" {
@@ -351,6 +356,10 @@ func (h *Handler) CreateWishlistItem(c *fiber.Ctx) error {
 
 	// Image ID handling: dari input.ImageID atau unduh dari input.ImageURL
 	var finalImageID *string
+	fallbackImgURL := ""
+	if input.ImageURL != nil {
+		fallbackImgURL = strings.TrimSpace(*input.ImageURL)
+	}
 	if input.ImageID != nil && strings.TrimSpace(*input.ImageID) != "" {
 		imgID := strings.TrimSpace(*input.ImageID)
 		if _, err := uuid.Parse(imgID); err != nil {
@@ -362,14 +371,15 @@ func (h *Handler) CreateWishlistItem(c *fiber.Ctx) error {
 			return ErrorResponse(c, fiber.StatusNotFound, "Foto tidak ditemukan atau bukan milik akun Anda")
 		}
 		finalImageID = &imgID
-	} else if input.ImageURL != nil && strings.TrimSpace(*input.ImageURL) != "" {
-		imgURL := strings.TrimSpace(*input.ImageURL)
-		parsedImgURL, err := media.ValidateURLFormat(imgURL)
+	} else if fallbackImgURL != "" {
+		parsedImgURL, err := media.ValidateURLFormat(fallbackImgURL)
 		if err == nil {
 			client := media.NewSSRFSafeHTTPClient(8*time.Second, false)
 			req, err := http.NewRequestWithContext(context.Background(), "GET", parsedImgURL.String(), nil)
 			if err == nil {
 				req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+				req.Header.Set("Referer", parsedImgURL.Scheme+"://"+parsedImgURL.Host+"/")
+				req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
 				if resp, err := client.Do(req); err == nil && resp.StatusCode == http.StatusOK {
 					defer resp.Body.Close()
 					if processed, err := media.ProcessAndResizeImage(resp.Body, 800); err == nil {
@@ -385,9 +395,9 @@ func (h *Handler) CreateWishlistItem(c *fiber.Ctx) error {
 	newID := uuid.New().String()
 	_, err := h.DB.Exec(`
 		INSERT INTO wishlist_items (
-			id, user_id, name, price, priority, category, link, source_site, link_resolved, price_source, image_id, note, target_date, status, saving_pot_id, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $7, $9, $10, $11, $12, 'aktif', $13, now())
-	`, newID, userID, name, input.Price, priority, category, link, sourceSite, priceSource, finalImageID, note, targetDateVal, savingPotIDVal)
+			id, user_id, name, price, priority, category, link, source_site, link_resolved, price_source, image_id, image_url, note, target_date, status, saving_pot_id, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $7, $9, $10, $11, $12, $13, 'aktif', $14, now())
+	`, newID, userID, name, input.Price, priority, category, link, sourceSite, priceSource, finalImageID, fallbackImgURL, note, targetDateVal, savingPotIDVal)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menambahkan item wishlist: "+err.Error())
 	}

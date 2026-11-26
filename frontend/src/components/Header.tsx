@@ -16,6 +16,7 @@ import {
   Plus,
   ShoppingBag,
   Sun,
+  User,
   X,
 } from "lucide-react";
 
@@ -37,6 +38,7 @@ const NAV_ITEMS = [
   { id: "subscriptions", label: "Langganan & Tagihan", icon: CalendarClock },
   { id: "savings", label: "Tabungan", icon: PiggyBank },
   { id: "wishlist", label: "Wishlist", icon: ShoppingBag },
+  { id: "profile", label: "Profil & Analitik", icon: User },
 ];
 
 export function Header({
@@ -115,8 +117,10 @@ export function Header({
 
           {/* User Profile Card */}
           <div className="px-3 py-4 border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
-            <div
-              className={`flex items-center gap-3 rounded-lg p-2 bg-[#f7f8f7] dark:bg-[#0e1412] ${
+            <button
+              type="button"
+              onClick={() => handleSelectTab("profile")}
+              className={`w-full text-left flex items-center gap-3 rounded-lg p-2 bg-[#f7f8f7] hover:bg-[#eef1ef] dark:bg-[#0e1412] dark:hover:bg-[#121c18] transition-colors cursor-pointer ${
                 collapsed ? "justify-center" : ""
               }`}
             >
@@ -133,7 +137,7 @@ export function Header({
                   )}
                 </div>
               )}
-            </div>
+            </button>
           </div>
 
           {/* Navigation Menu */}
@@ -189,12 +193,12 @@ export function Header({
               {isDark ? (
                 <>
                   <Sun className="w-3.5 h-3.5 text-[#34d399]" />
-                  {!collapsed && <span>Light</span>}
+                  {!collapsed && <span>Light Mode</span>}
                 </>
               ) : (
                 <>
                   <Moon className="w-3.5 h-3.5 text-[#059669]" />
-                  {!collapsed && <span>Dark</span>}
+                  {!collapsed && <span>Dark Mode</span>}
                 </>
               )}
             </button>

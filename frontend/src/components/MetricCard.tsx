@@ -33,9 +33,9 @@ export function MetricCard({
   };
 
   return (
-    <div className="flex flex-col justify-between rounded-lg border border-zinc-200 bg-white p-4 shadow-xs transition-all dark:border-zinc-800 dark:bg-[#12151c]">
+    <div className="flex flex-col justify-between rounded-xl border border-[#0b110e]/10 bg-white p-4 shadow-xs transition-colors dark:border-[#f4f7f5]/10 dark:bg-[#0e1412]">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <span className="text-xs font-medium text-[#47544d] dark:text-[#a3b8ad]">
           {title}
         </span>
         {badgeText && (
@@ -48,11 +48,11 @@ export function MetricCard({
       </div>
 
       <div className="mt-3">
-        <div className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50 num-tabular">
+        <div className="text-2xl font-bold tracking-tight text-[#0b110e] dark:text-[#f4f7f5] font-mono num-tabular">
           {formatRupiah(value)}
         </div>
         {subtitle && (
-          <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-[11px] text-[#47544d] dark:text-[#a3b8ad]">
             {subtitle}
           </p>
         )}

@@ -170,5 +170,6 @@ CREATE TABLE IF NOT EXISTS wishlist_items (
 CREATE INDEX IF NOT EXISTS idx_wishlist_user_status_priority 
 ON wishlist_items (user_id, status, priority);
 
+ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS image_url TEXT NOT NULL DEFAULT '';
 
 `

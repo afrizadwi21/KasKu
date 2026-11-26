@@ -101,6 +101,10 @@ export default function DashboardPage() {
 
   const [isDark, setIsDark] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [profileName, setProfileName] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [analyticsYear, setAnalyticsYear] = useState<string>("2026");
+  const [wishPreviewBroken, setWishPreviewBroken] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "masuk" | "keluar">("all");
@@ -188,6 +192,7 @@ export default function DashboardPage() {
       ]);
 
       setUser(meData);
+      setProfileName(meData?.name || "");
       setOverview(overviewRes || EMPTY_OVERVIEW);
       setTodayData(todayRes || EMPTY_TODAY);
       setTransactions(Array.isArray(txRes) ? txRes : []);
@@ -232,16 +237,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("kasku_theme");
-    if (savedTheme === "dark") {
-      setIsDark(true);
-    }
+    const initialDark = savedTheme === "dark";
+    setIsDark(initialDark);
+    document.documentElement.classList.toggle("dark", initialDark);
     const token = getStoredAccessToken();
     if (!token) {
       clearAuthSession();
       router.replace("/login");
       return;
     }
-    const todayStr = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    setAnalyticsYear(String(now.getFullYear()));
     setSubFirstDue(todayStr);
     setBillDueDate(todayStr);
     loadAllData();
@@ -251,8 +258,31 @@ export default function DashboardPage() {
     setIsDark((prev) => {
       const next = !prev;
       localStorage.setItem("kasku_theme", next ? "dark" : "light");
+      document.documentElement.classList.toggle("dark", next);
       return next;
     });
+  };
+
+  const handleUpdateProfileName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileName.trim()) return;
+    setSavingProfile(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const updated = await apiFetch<UserProfile>("/api/me", {
+        method: "PUT",
+        body: JSON.stringify({ name: profileName.trim() }),
+      });
+      setUser((prev) => (prev ? { ...prev, name: updated.name } : updated));
+      setSuccessMsg("Profil berhasil diperbarui.");
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal memperbarui profil."
+      );
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -1686,6 +1716,7 @@ export default function DashboardPage() {
                       onChange={(e) => {
                         setWishImageURL(e.target.value);
                         setWishPreviewURL(e.target.value);
+                        setWishPreviewBroken(false);
                         setWishImageID("");
                       }}
                       className={`flex-1 ${inputClass}`}
@@ -1702,13 +1733,19 @@ export default function DashboardPage() {
                     </label>
                   </div>
 
-                  <div className="sm:col-span-3 flex items-center">
-                    {wishPreviewURL && (
+                  <div className="sm:col-span-3 flex items-center gap-2">
+                    {wishPreviewURL && !wishPreviewBroken && (
                       <img
                         src={wishPreviewURL}
                         alt="Preview produk"
+                        onError={() => setWishPreviewBroken(true)}
                         className="h-10 w-10 rounded-lg object-cover border border-[#0b110e]/15 dark:border-[#f4f7f5]/15"
                       />
+                    )}
+                    {wishPreviewURL && wishPreviewBroken && (
+                      <span className="text-[11px] text-amber-600 dark:text-amber-400">
+                        URL bukan gambar langsung, silakan Upload Foto
+                      </span>
                     )}
                   </div>
 
@@ -1812,6 +1849,343 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+
+          {/* VIEW 7: PROFILE & ANALYTICS (MONTH-TO-MONTH, YEAR-TO-YEAR, CHARTS) */}
+          {activeTab === "profile" && (() => {
+            const MONTH_NAMES = [
+              "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+              "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+            ];
+
+            // Group transactions by year & month
+            const yearsSet = new Set<string>([analyticsYear || "2026"]);
+            const yearlyMap: Record<string, { masuk: number; keluar: number }> = {};
+            const monthlyMap: Record<string, { masuk: number; keluar: number }[]> = {};
+            const categoryMap: Record<string, number> = {};
+
+            for (const tx of transactions) {
+              const year = (tx.date || "").slice(0, 4);
+              const monthIdx = Number((tx.date || "").slice(5, 7)) - 1;
+              if (!year || year.length !== 4 || monthIdx < 0 || monthIdx > 11) continue;
+
+              yearsSet.add(year);
+              if (!yearlyMap[year]) yearlyMap[year] = { masuk: 0, keluar: 0 };
+              if (!monthlyMap[year]) {
+                monthlyMap[year] = Array.from({ length: 12 }, () => ({
+                  masuk: 0,
+                  keluar: 0,
+                }));
+              }
+
+              if (tx.type === "masuk") {
+                yearlyMap[year].masuk += tx.amount;
+                monthlyMap[year][monthIdx].masuk += tx.amount;
+              } else {
+                yearlyMap[year].keluar += tx.amount;
+                monthlyMap[year][monthIdx].keluar += tx.amount;
+                if (year === analyticsYear) {
+                  categoryMap[tx.category] = (categoryMap[tx.category] || 0) + tx.amount;
+                }
+              }
+            }
+
+            const availableYears = Array.from(yearsSet).sort((a, b) => Number(b) - Number(a));
+            const monthsData =
+              monthlyMap[analyticsYear] ||
+              Array.from({ length: 12 }, () => ({ masuk: 0, keluar: 0 }));
+
+            const maxMonthVal = Math.max(
+              1,
+              ...monthsData.map((m) => Math.max(m.masuk, m.keluar))
+            );
+            const yearTotals = yearlyMap[analyticsYear] || { masuk: 0, keluar: 0 };
+            const topCategories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+            const maxCatVal = Math.max(1, topCategories[0]?.[1] || 1);
+
+            return (
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h1 className="font-display text-2xl sm:text-3xl">
+                      Profil & Analitik Keuangan
+                    </h1>
+                    <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                      Kelola profil akun dan pantau tren pemasukan & pengeluaran Anda.
+                    </p>
+                  </div>
+                  <select
+                    value={analyticsYear}
+                    onChange={(e) => setAnalyticsYear(e.target.value)}
+                    aria-label="Pilih Tahun Analitik"
+                    className={inputClass}
+                  >
+                    {availableYears.map((yr) => (
+                      <option key={yr} value={yr}>
+                        Tahun {yr}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Profile Card */}
+                <div className={`p-5 ${cardClass}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#10b981]/15 border border-[#10b981]/40 text-lg font-bold text-[#059669] dark:text-[#34d399]">
+                        {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-base">{user.name}</div>
+                        <div className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                          {user.email}
+                        </div>
+                      </div>
+                    </div>
+
+                    <form
+                      onSubmit={handleUpdateProfileName}
+                      className="flex items-center gap-2"
+                    >
+                      <input
+                        type="text"
+                        required
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        placeholder="Ubah nama profil"
+                        className={inputClass}
+                      />
+                      <button
+                        type="submit"
+                        disabled={savingProfile}
+                        className="rounded-lg bg-[#10b981] hover:bg-[#34d399] px-3.5 py-2 text-xs font-semibold text-[#070a09] cursor-pointer"
+                      >
+                        {savingProfile ? "Menyimpan..." : "Simpan Nama"}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Year Summary KPIs */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <MetricCard
+                    title={`Total Pemasukan (${analyticsYear})`}
+                    value={yearTotals.masuk}
+                    badgeText="Masuk"
+                    badgeVariant="income"
+                  />
+                  <MetricCard
+                    title={`Total Pengeluaran (${analyticsYear})`}
+                    value={yearTotals.keluar}
+                    badgeText="Keluar"
+                    badgeVariant="expense"
+                  />
+                  <MetricCard
+                    title={`Selisih Bersih (${analyticsYear})`}
+                    value={yearTotals.masuk - yearTotals.keluar}
+                    badgeText={yearTotals.masuk >= yearTotals.keluar ? "Surplus" : "Defisit"}
+                    badgeVariant={yearTotals.masuk >= yearTotals.keluar ? "income" : "expense"}
+                  />
+                </div>
+
+                {/* Dual-Bar Chart: Pemasukan vs Pengeluaran */}
+                <div className={`p-5 space-y-4 ${cardClass}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="font-display text-lg">
+                        Chart Pemasukan & Pengeluaran ({analyticsYear})
+                      </h2>
+                      <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                        Perbandingan arus kas masuk dan keluar tiap bulan
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-xs bg-[#10b981]" />
+                        Pemasukan
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-xs bg-red-500" />
+                        Pengeluaran
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="h-56 flex items-end gap-2 sm:gap-3 border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 pb-2">
+                      {monthsData.map((m, idx) => {
+                        const masukPct = Math.round((m.masuk / maxMonthVal) * 100);
+                        const keluarPct = Math.round((m.keluar / maxMonthVal) * 100);
+                        return (
+                          <div
+                            key={MONTH_NAMES[idx]}
+                            className="flex-1 h-full flex flex-col justify-end items-center gap-1 group relative"
+                          >
+                            {/* Hover Tooltip */}
+                            <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 z-20 rounded-md border border-[#0b110e]/15 bg-[#070a09] text-[#f4f7f5] px-2 py-1 text-[10px] font-mono whitespace-nowrap shadow-lg">
+                              <div>{MONTH_NAMES[idx]} {analyticsYear}</div>
+                              <div className="text-[#34d399]">+{formatRupiah(m.masuk)}</div>
+                              <div className="text-red-400">-{formatRupiah(m.keluar)}</div>
+                            </div>
+
+                            <div className="w-full flex-1 flex items-end justify-center gap-1">
+                              <div
+                                className="w-2.5 sm:w-3.5 rounded-t-sm bg-[#10b981] transition-all duration-300"
+                                style={{ height: `${Math.max(m.masuk > 0 ? 4 : 1, masukPct)}%` }}
+                              />
+                              <div
+                                className="w-2.5 sm:w-3.5 rounded-t-sm bg-red-500 transition-all duration-300"
+                                style={{ height: `${Math.max(m.keluar > 0 ? 4 : 1, keluarPct)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2 sm:gap-3 pt-2">
+                      {MONTH_NAMES.map((name) => (
+                        <div
+                          key={name}
+                          className="flex-1 text-center text-[10px] sm:text-xs font-mono text-[#47544d] dark:text-[#a3b8ad]"
+                        >
+                          {name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Month-to-Month Expense Table */}
+                  <div className={`p-5 space-y-3 ${cardClass}`}>
+                    <h2 className="font-display text-lg">
+                      Analitik Bulan ke Bulan ({analyticsYear})
+                    </h2>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 text-[#47544d] dark:text-[#a3b8ad]">
+                            <th className="py-2 font-medium">Bulan</th>
+                            <th className="py-2 font-medium text-right">Masuk</th>
+                            <th className="py-2 font-medium text-right">Keluar</th>
+                            <th className="py-2 font-medium text-right">Tren Keluar</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
+                          {monthsData.map((m, idx) => {
+                            if (m.masuk === 0 && m.keluar === 0) return null;
+                            const prevKeluar = idx > 0 ? monthsData[idx - 1].keluar : 0;
+                            const diffPct =
+                              prevKeluar > 0
+                                ? Math.round(((m.keluar - prevKeluar) / prevKeluar) * 100)
+                                : null;
+                            return (
+                              <tr key={MONTH_NAMES[idx]}>
+                                <td className="py-2.5 font-medium">{MONTH_NAMES[idx]}</td>
+                                <td className="py-2.5 text-right font-mono text-[#059669] dark:text-[#34d399] num-tabular">
+                                  {formatRupiah(m.masuk)}
+                                </td>
+                                <td className="py-2.5 text-right font-mono num-tabular">
+                                  {formatRupiah(m.keluar)}
+                                </td>
+                                <td className="py-2.5 text-right font-mono text-[11px] num-tabular">
+                                  {diffPct === null ? (
+                                    <span className="text-[#47544d] dark:text-[#a3b8ad]">—</span>
+                                  ) : (
+                                    <span className={diffPct > 0 ? "text-red-500" : "text-[#059669] dark:text-[#34d399]"}>
+                                      {diffPct > 0 ? `+${diffPct}%` : `${diffPct}%`}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {monthsData.every((m) => m.masuk === 0 && m.keluar === 0) && (
+                            <tr>
+                              <td colSpan={4} className="py-6 text-center text-[#47544d] dark:text-[#a3b8ad]">
+                                Belum ada transaksi pada tahun {analyticsYear}.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Year-to-Year + Top Categories */}
+                  <div className="space-y-6">
+                    <div className={`p-5 space-y-3 ${cardClass}`}>
+                      <h2 className="font-display text-lg">
+                        Perbandingan Tahun ke Tahun
+                      </h2>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 text-[#47544d] dark:text-[#a3b8ad]">
+                              <th className="py-2 font-medium">Tahun</th>
+                              <th className="py-2 font-medium text-right">Pemasukan</th>
+                              <th className="py-2 font-medium text-right">Pengeluaran</th>
+                              <th className="py-2 font-medium text-right">Bersih</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
+                            {availableYears.map((yr) => {
+                              const tot = yearlyMap[yr] || { masuk: 0, keluar: 0 };
+                              const net = tot.masuk - tot.keluar;
+                              return (
+                                <tr key={yr}>
+                                  <td className="py-2.5 font-mono font-semibold">{yr}</td>
+                                  <td className="py-2.5 text-right font-mono text-[#059669] dark:text-[#34d399] num-tabular">
+                                    {formatRupiah(tot.masuk)}
+                                  </td>
+                                  <td className="py-2.5 text-right font-mono num-tabular">
+                                    {formatRupiah(tot.keluar)}
+                                  </td>
+                                  <td className={`py-2.5 text-right font-mono font-semibold num-tabular ${net >= 0 ? "text-[#059669] dark:text-[#34d399]" : "text-red-500"}`}>
+                                    {net >= 0 ? "+" : ""}
+                                    {formatRupiah(net)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className={`p-5 space-y-3 ${cardClass}`}>
+                      <h2 className="font-display text-lg">
+                        Kategori Pengeluaran Terbesar ({analyticsYear})
+                      </h2>
+                      {topCategories.length === 0 ? (
+                        <p className="py-4 text-center text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                          Belum ada pengeluaran pada tahun {analyticsYear}.
+                        </p>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {topCategories.slice(0, 5).map(([cat, total]) => (
+                            <div key={cat} className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="font-medium">{cat}</span>
+                                <span className="font-mono num-tabular">
+                                  {formatRupiah(total)}
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-[#eef1ef] dark:bg-[#f4f7f5]/10 overflow-hidden">
+                                <div
+                                  className="h-full bg-[#10b981]"
+                                  style={{ width: `${Math.round((total / maxCatVal) * 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </main>
 
         <TransactionModal
