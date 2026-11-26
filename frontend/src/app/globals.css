@@ -58,3 +58,63 @@ body {
 .border-subtle {
   border-color: var(--border-hairline);
 }
+
+/* Display typography */
+.font-display {
+  font-family: var(--font-archivo), var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Landing page editorial motion */
+@keyframes kasku-ken-burns {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.06) translate3d(-0.8%, -0.8%, 0);
+  }
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes kasku-float-slow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes kasku-reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-ken-burns {
+  animation: kasku-ken-burns 26s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-float-slow {
+  animation: kasku-float-slow 6s ease-in-out infinite;
+}
+
+.animate-reveal-up {
+  animation: kasku-reveal-up 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ken-burns,
+  .animate-float-slow,
+  .animate-reveal-up {
+    animation: none !important;
+    transform: none !important;
+  }
+}
