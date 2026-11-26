@@ -5,10 +5,10 @@ import Link from "next/link";
 import { ArrowRight, Play } from "lucide-react";
 
 const TELEMETRY_ITEMS = [
-  { label: "Arsitektur", value: "Golang + Next.js" },
-  { label: "Keamanan", value: "JWT HS256 & Bcrypt" },
-  { label: "Privasi", value: "0% Iklan & Pelacak" },
-  { label: "Isolasi", value: "100% Multi-User" },
+  { label: "Catatan Harian", value: "Uang Masuk & Keluar" },
+  { label: "Pos Tabungan", value: "Pisah Uang Jajan & Target" },
+  { label: "Wishlist", value: "Simulasi Sebelum Beli" },
+  { label: "Privasi", value: "Akun Pribadi, Tanpa Iklan" },
 ];
 
 export function LandingHero() {
@@ -52,10 +52,10 @@ export function LandingHero() {
       <div className="relative z-10 max-w-7xl w-full mx-auto px-5 sm:px-8 py-12 sm:py-20">
         <div className="max-w-3xl space-y-6 animate-reveal-up">
           <h1 className="font-display text-4xl sm:text-6xl lg:text-[4.5rem] font-semibold tracking-[-0.03em] leading-[1.03] text-balance text-white">
-            Presisi baru dalam mengelola kas pribadi.
+            Tahu persis uang yang boleh dipakai hari ini.
           </h1>
           <p className="text-base sm:text-xl text-[#e4e4e2] max-w-2xl leading-relaxed font-normal">
-            Pisahkan saldo bebas dari pos tabungan, pantau piutang dan langganan otomatis, serta simulasikan setiap pembelian wishlist sebelum uang keluar.
+            KasKu memisahkan uang jajan dari tabungan Anda, mencatat siapa yang masih berhutang, mengingatkan tagihan rutin, dan menghitung sisa saldo sebelum Anda belanja.
           </p>
 
           <div className="pt-4 flex flex-wrap items-center gap-4">
@@ -63,7 +63,7 @@ export function LandingHero() {
               href="/dashboard"
               className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm bg-white hover:bg-[#f5f5f3] text-black font-semibold text-sm sm:text-base transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
             >
-              <span>Buka Dashboard KasKu</span>
+              <span>Mulai Catat Sekarang</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <a
@@ -71,7 +71,7 @@ export function LandingHero() {
               className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm border border-white/30 bg-white/5 hover:bg-white/15 text-white font-medium text-sm sm:text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
             >
               <Play className="w-4 h-4 text-[#38bdf8]" />
-              <span>Eksplorasi 3D Finance</span>
+              <span>Lihat Cara Kerja 3D</span>
             </a>
           </div>
         </div>

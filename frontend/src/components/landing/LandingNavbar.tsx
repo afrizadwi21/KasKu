@@ -5,10 +5,10 @@ import Link from "next/link";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
-  { label: "Misi", href: "#misi" },
-  { label: "Arsitektur", href: "#arsitektur" },
+  { label: "Cara Kerja", href: "#cara-kerja" },
+  { label: "Fitur", href: "#fitur" },
   { label: "Simulasi", href: "#simulasi" },
-  { label: "Keamanan", href: "#keamanan" },
+  { label: "Privasi", href: "#privasi" },
 ];
 
 export function LandingNavbar() {
