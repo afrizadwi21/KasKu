@@ -534,10 +534,76 @@ export default function DashboardPage() {
       setPotTarget("");
       setPotNote("");
       setSuccessMsg("Pos tabungan berhasil dibuat.");
-      await loadAllData();
+      await loadAllData(true);
     } catch (err: unknown) {
       setErrorMsg(
         err instanceof Error ? err.message : "Gagal membuat pos tabungan."
+      );
+    }
+  };
+
+  const handleDeleteSavingsPot = async (potId: string) => {
+    try {
+      setErrorMsg("");
+      setSuccessMsg("");
+      try {
+        await apiFetch(`/api/savings/${potId}`, { method: "DELETE" });
+        setSuccessMsg("Pos tabungan berhasil dihapus.");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg.includes("/close") || msg.includes("riwayat mutasi") || msg.includes("memiliki saldo")) {
+          await apiFetch(`/api/savings/${potId}/close`, { method: "POST" });
+          setSuccessMsg("Pos tabungan ditutup & saldo dikembalikan ke saldo bebas.");
+        } else {
+          throw err;
+        }
+      }
+      await loadAllData(true);
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal menghapus pos tabungan."
+      );
+    }
+  };
+
+  const handleDeleteSavingsMovement = async (movId: string) => {
+    try {
+      setErrorMsg("");
+      setSuccessMsg("");
+      await apiFetch(`/api/savings/movements/${movId}`, { method: "DELETE" });
+      setSuccessMsg("Mutasi tabungan berhasil dibatalkan.");
+      await loadAllData(true);
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal menghapus mutasi tabungan."
+      );
+    }
+  };
+
+  const handleDeleteSubscription = async (subId: string) => {
+    try {
+      setErrorMsg("");
+      setSuccessMsg("");
+      await apiFetch(`/api/subscriptions/${subId}`, { method: "DELETE" });
+      setSuccessMsg("Langganan berhasil dihapus.");
+      await loadAllData(true);
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal menghapus langganan."
+      );
+    }
+  };
+
+  const handleDeleteBill = async (billId: string) => {
+    try {
+      setErrorMsg("");
+      setSuccessMsg("");
+      await apiFetch(`/api/bills/${billId}`, { method: "DELETE" });
+      setSuccessMsg("Tagihan berhasil dihapus.");
+      await loadAllData(true);
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal menghapus tagihan."
       );
     }
   };
@@ -1566,7 +1632,7 @@ export default function DashboardPage() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <span className="font-mono text-sm font-semibold num-tabular">
                             {formatRupiah(sub.amount)}
                           </span>
@@ -1576,6 +1642,14 @@ export default function DashboardPage() {
                             className="rounded-lg bg-[#10b981] px-3 py-1.5 text-xs font-semibold text-[#070a09] hover:bg-[#34d399] cursor-pointer"
                           >
                             Bayar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSubscription(sub.id)}
+                            title="Hapus langganan"
+                            className={`p-1.5 ${mutedCls} hover:text-red-500 cursor-pointer`}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -1637,7 +1711,7 @@ export default function DashboardPage() {
                             Jatuh tempo {bill.due_date} · {bill.status}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <span className="font-mono text-sm font-semibold num-tabular">
                             {formatRupiah(bill.amount)}
                           </span>
@@ -1652,6 +1726,14 @@ export default function DashboardPage() {
                           ) : (
                             <CheckCircle2 className={`h-4 w-4 ${emeraldTextCls}`} />
                           )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteBill(bill.id)}
+                            title="Hapus tagihan"
+                            className={`p-1.5 ${mutedCls} hover:text-red-500 cursor-pointer`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -1733,7 +1815,7 @@ export default function DashboardPage() {
                     className={`rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer ${
                       savingsFilter === "wishlist"
                         ? "bg-[#10b981] text-[#070a09]"
-                        : "${mutedCls}"
+                        : mutedCls
                     }`}
                   >
                     Tabungan Wishlist
@@ -1741,7 +1823,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {filteredSavingsPots.length === 0 ? (
+              {filteredSavingsPots.filter((p) => !p.archived).length === 0 ? (
                 <div className={`py-12 text-center ${cardClass}`}>
                   <PiggyBank className={`h-8 w-8 mx-auto ${mutedCls} opacity-40 mb-2`} />
                   <p className={`text-sm ${mutedCls}`}>
@@ -1750,7 +1832,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredSavingsPots.map((pot) => {
+                  {filteredSavingsPots.filter((p) => !p.archived).map((pot) => {
                     const target = pot.target || 0;
                     const saldo = pot.saldo || 0;
                     const pct =
@@ -1773,15 +1855,25 @@ export default function DashboardPage() {
                               {target > 0 ? ` / ${formatRupiah(target)} (${pct}%)` : ""}
                             </p>
                           </div>
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                              isWishPot
-                                ? isDark ? "bg-amber-950/40 text-amber-300" : "bg-amber-50 text-amber-700"
-                                : isDark ? "bg-[#10b981]/15 text-[#34d399]" : "bg-[#ecfdf5] text-[#059669]"
-                            }`}
-                          >
-                            {isWishPot ? "Tabungan Wishlist" : "Tabungan Umum"}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                                isWishPot
+                                  ? isDark ? "bg-amber-950/40 text-amber-300" : "bg-amber-50 text-amber-700"
+                                  : isDark ? "bg-[#10b981]/15 text-[#34d399]" : "bg-[#ecfdf5] text-[#059669]"
+                              }`}
+                            >
+                              {isWishPot ? "Tabungan Wishlist" : "Tabungan Umum"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSavingsPot(pot.id)}
+                              title="Hapus / Tutup pos tabungan"
+                              className={`p-1 ${mutedCls} hover:text-red-500 cursor-pointer`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                         <div className={`h-2 w-full rounded-full ${isDark ? "bg-[#f4f7f5]/10" : "bg-[#eef1ef]"} overflow-hidden`}>
                           <div
@@ -1865,16 +1957,24 @@ export default function DashboardPage() {
                             <span className="font-mono">{m.date}</span>
                           </div>
                         </div>
-                        <span
-                          className={`font-mono font-semibold num-tabular ${
-                            m.type === "setor"
-                              ? "${emeraldTextCls}"
-                              : ""
-                          }`}
-                        >
-                          {m.type === "setor" ? "+" : "-"}
-                          {formatRupiah(m.amount)}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`font-mono font-semibold num-tabular ${
+                              m.type === "setor" ? emeraldTextCls : ""
+                            }`}
+                          >
+                            {m.type === "setor" ? "+" : "-"}
+                            {formatRupiah(m.amount)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSavingsMovement(m.id)}
+                            title="Batalkan / Hapus mutasi tabungan"
+                            className={`p-1 ${mutedCls} hover:text-red-500 cursor-pointer`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
