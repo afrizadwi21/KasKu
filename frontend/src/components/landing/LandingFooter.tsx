@@ -31,9 +31,14 @@ const PRIVACY_POINTS = [
 
 export function LandingFooter() {
   const sectionRef = useRef<HTMLElement | null>(null);
-  const [scrollOffset, setScrollOffset] = useState(0); // -1 .. 0 .. +1
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const activeIndexRef = useRef<number | null>(null);
+  const cardTiltRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [cardTilt, setCardTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   useEffect(() => {
     const prefersReducedMotion =
@@ -41,43 +46,62 @@ export function LandingFooter() {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) return;
 
+    let currentOffset = 0;
+    let currentTiltX = 0;
+    let currentTiltY = 0;
     let rafId = 0;
 
-    const update = () => {
+    const tick = () => {
       const el = sectionRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight || 800;
-      const center = rect.top + rect.height / 2;
-      const norm = Math.max(-1, Math.min(1, (vh / 2 - center) / (vh * 0.7)));
-      setScrollOffset(norm);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const vh = window.innerHeight || 800;
+        const center = rect.top + rect.height / 2;
+        const targetOffset = Math.max(-1.1, Math.min(1.1, (vh / 2 - center) / (vh * 0.65)));
+
+        // Slow, realistic damped inertia (0.045)
+        currentOffset += (targetOffset - currentOffset) * 0.045;
+        currentTiltX += (cardTiltRef.current.x - currentTiltX) * 0.07;
+        currentTiltY += (cardTiltRef.current.y - currentTiltY) * 0.07;
+
+        const focusedIdx = activeIndexRef.current;
+
+        cardRefs.current.forEach((card, idx) => {
+          if (!card) return;
+          const isFocused = focusedIdx === idx;
+          const isDimmed = focusedIdx !== null && focusedIdx !== idx;
+
+          const wave = Math.sin(currentOffset * 1.8 + idx * 0.7);
+          const baseRotX = currentOffset * (9 + idx * 2.5);
+          const baseRotY = -7 + wave * 6.5;
+          const baseTranslateZ = isFocused ? 42 : isDimmed ? -20 : wave * 18;
+          const baseTranslateX = isFocused ? -10 : idx * 8 * (1 - Math.abs(currentOffset));
+
+          const finalRotX = isFocused ? -currentTiltY * 12 : baseRotX;
+          const finalRotY = isFocused ? currentTiltX * 14 : baseRotY;
+          const scale = isFocused ? 1.025 : isDimmed ? 0.965 : 1;
+
+          card.style.transform = `translate3d(${baseTranslateX.toFixed(2)}px, 0, ${baseTranslateZ.toFixed(2)}px) rotateX(${finalRotX.toFixed(2)}deg) rotateY(${finalRotY.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+        });
+      }
+      rafId = requestAnimationFrame(tick);
     };
 
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   const handleCardPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const nx = (e.clientX - rect.left) / rect.width - 0.5;
-    const ny = (e.clientY - rect.top) / rect.height - 0.5;
-    setCardTilt({ x: nx, y: ny });
+    cardTiltRef.current = {
+      x: (e.clientX - rect.left) / rect.width - 0.5,
+      y: (e.clientY - rect.top) / rect.height - 0.5,
+    };
   };
 
   return (
     <footer className="bg-[#140a05] text-[#f8f4ee] border-t border-[#f8f4ee]/15 overflow-hidden">
-      {/* Privacy & Control Section with 3D Spatial Cascade Deck */}
+      {/* Privacy & Control Section with Slow Physics-Damped 3D Spatial Cascade Deck */}
       <section
         ref={sectionRef}
         id="privasi"
@@ -124,34 +148,24 @@ export function LandingFooter() {
               const isFocused = activeIndex === idx;
               const isDimmed = activeIndex !== null && activeIndex !== idx;
 
-              // Staggered 3D cascade depth driven by scroll up/down
-              const wave = Math.sin((scrollOffset * 1.6) + idx * 0.65);
-              const baseRotX = scrollOffset * (6 + idx * 2.2);
-              const baseRotY = -6 + wave * 5;
-              const baseTranslateZ = isFocused ? 38 : isDimmed ? -18 : wave * 14;
-              const baseTranslateX = isFocused ? -8 : idx * 6 * (1 - Math.abs(scrollOffset));
-
-              const hoverRotX = isFocused ? -cardTilt.y * 10 : baseRotX;
-              const hoverRotY = isFocused ? cardTilt.x * 12 : baseRotY;
-
               return (
                 <div
                   key={item.title}
+                  ref={(el) => {
+                    cardRefs.current[idx] = el;
+                  }}
                   onPointerEnter={() => setActiveIndex(idx)}
                   onPointerMove={handleCardPointerMove}
                   onPointerLeave={() => {
                     setActiveIndex(null);
-                    setCardTilt({ x: 0, y: 0 });
+                    cardTiltRef.current = { x: 0, y: 0 };
                   }}
-                  className={`relative rounded-sm border p-5 sm:p-6 transition-all duration-300 ease-out will-change-transform cursor-default ${
+                  className={`relative rounded-sm border p-5 sm:p-6 transition-colors duration-300 will-change-transform cursor-default ${
                     isFocused
                       ? "border-[#ff5b14] bg-[#24130b] shadow-[0_24px_50px_-18px_rgba(255,91,20,0.35)]"
                       : "border-[#f8f4ee]/15 bg-[#1a0e08]/90"
                   }`}
                   style={{
-                    transform: `translate3d(${baseTranslateX}px, 0, ${baseTranslateZ}px) rotateX(${hoverRotX}deg) rotateY(${hoverRotY}deg) scale(${
-                      isFocused ? 1.02 : isDimmed ? 0.97 : 1
-                    })`,
                     opacity: isDimmed ? 0.65 : 1,
                     transformStyle: "preserve-3d",
                   }}
