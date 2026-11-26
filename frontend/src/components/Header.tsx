@@ -59,17 +59,24 @@ export function Header({
     setMobileOpen(false);
   };
 
+  const borderCls = isDark ? "border-[#f4f7f5]/10" : "border-[#0b110e]/10";
+  const mutedCls = isDark ? "text-[#a3b8ad]" : "text-[#47544d]";
+
   return (
     <>
       {/* Desktop Sidebar */}
       <aside
         className={`hidden lg:flex flex-col justify-between shrink-0 sticky top-0 h-screen border-r transition-all duration-200 ${
           collapsed ? "w-20" : "w-64"
-        } border-[#0b110e]/10 bg-white text-[#0b110e] dark:border-[#f4f7f5]/10 dark:bg-[#0b110e] dark:text-[#f4f7f5]`}
+        } ${
+          isDark
+            ? "border-[#f4f7f5]/10 bg-[#0b110e] text-[#f4f7f5]"
+            : "border-[#0b110e]/10 bg-white text-[#0b110e]"
+        }`}
       >
         <div>
           {/* Brand + Collapse Button */}
-          <div className="h-16 px-4 flex items-center justify-between border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+          <div className={`h-16 px-4 flex items-center justify-between border-b ${borderCls}`}>
             <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
               <svg
                 width="28"
@@ -105,7 +112,11 @@ export function Header({
               type="button"
               onClick={() => setCollapsed((v) => !v)}
               aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
-              className="p-1.5 rounded-md border border-[#0b110e]/10 text-[#47544d] hover:bg-[#eef1ef] dark:border-[#f4f7f5]/15 dark:text-[#a3b8ad] dark:hover:bg-[#121c18] cursor-pointer"
+              className={`p-1.5 rounded-md border cursor-pointer ${
+                isDark
+                  ? "border-[#f4f7f5]/15 text-[#a3b8ad] hover:bg-[#121c18]"
+                  : "border-[#0b110e]/10 text-[#47544d] hover:bg-[#eef1ef]"
+              }`}
             >
               {collapsed ? (
                 <ChevronRight className="w-4 h-4" />
@@ -116,22 +127,30 @@ export function Header({
           </div>
 
           {/* User Profile Card */}
-          <div className="px-3 py-4 border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+          <div className={`px-3 py-4 border-b ${borderCls}`}>
             <button
               type="button"
               onClick={() => handleSelectTab("profile")}
-              className={`w-full text-left flex items-center gap-3 rounded-lg p-2 bg-[#f7f8f7] hover:bg-[#eef1ef] dark:bg-[#0e1412] dark:hover:bg-[#121c18] transition-colors cursor-pointer ${
+              className={`w-full text-left flex items-center gap-3 rounded-lg p-2 transition-colors cursor-pointer ${
                 collapsed ? "justify-center" : ""
+              } ${
+                isDark
+                  ? "bg-[#0e1412] hover:bg-[#121c18]"
+                  : "bg-[#f7f8f7] hover:bg-[#eef1ef]"
               }`}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#10b981]/15 border border-[#10b981]/40 text-xs font-bold text-[#059669] dark:text-[#34d399]">
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#10b981]/15 border border-[#10b981]/40 text-xs font-bold ${
+                  isDark ? "text-[#34d399]" : "text-[#059669]"
+                }`}
+              >
                 {userName ? userName.charAt(0).toUpperCase() : "U"}
               </div>
               {!collapsed && (
                 <div className="min-w-0 leading-tight">
                   <div className="text-xs font-semibold truncate">{userName}</div>
                   {userEmail && (
-                    <div className="text-[11px] text-[#47544d] dark:text-[#a3b8ad] truncate">
+                    <div className={`text-[11px] truncate ${mutedCls}`}>
                       {userEmail}
                     </div>
                   )}
@@ -155,8 +174,12 @@ export function Header({
                     collapsed ? "justify-center" : ""
                   } ${
                     isActive
-                      ? "bg-[#ecfdf5] text-[#059669] font-semibold dark:bg-[#10b981]/15 dark:text-[#34d399]"
-                      : "text-[#47544d] hover:bg-[#f7f8f7] hover:text-[#0b110e] dark:text-[#a3b8ad] dark:hover:bg-[#121c18] dark:hover:text-[#f4f7f5]"
+                      ? isDark
+                        ? "bg-[#10b981]/15 text-[#34d399] font-semibold"
+                        : "bg-[#ecfdf5] text-[#059669] font-semibold"
+                      : isDark
+                      ? "text-[#a3b8ad] hover:bg-[#121c18] hover:text-[#f4f7f5]"
+                      : "text-[#47544d] hover:bg-[#f7f8f7] hover:text-[#0b110e]"
                   }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
@@ -168,12 +191,12 @@ export function Header({
         </div>
 
         {/* Bottom Action + Theme + Logout */}
-        <div className="p-3 pb-16 border-t border-[#0b110e]/10 dark:border-[#f4f7f5]/10 space-y-3">
+        <div className={`p-3 pb-16 border-t ${borderCls} space-y-3`}>
           <button
             type="button"
             onClick={onOpenModal}
             title="Catat Kas"
-            className={`w-full flex items-center justify-center gap-2 rounded-full bg-[#10b981] hover:bg-[#34d399] text-[#070a09] py-2.5 px-3 text-xs font-semibold shadow-sm transition-colors cursor-pointer`}
+            className="w-full flex items-center justify-center gap-2 rounded-full bg-[#10b981] hover:bg-[#34d399] text-[#070a09] py-2.5 px-3 text-xs font-semibold shadow-sm transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4 shrink-0" />
             {!collapsed && <span>Catat Kas</span>}
@@ -188,7 +211,11 @@ export function Header({
               type="button"
               onClick={onToggleTheme}
               title={isDark ? "Ubah ke Light Mode" : "Ubah ke Dark Mode"}
-              className="flex flex-col items-center justify-center gap-1 rounded-lg border border-[#0b110e]/10 bg-[#f7f8f7] hover:bg-[#eef1ef] py-2 px-2 text-[11px] font-medium text-[#0b110e] dark:border-[#f4f7f5]/10 dark:bg-[#0e1412] dark:text-[#f4f7f5] dark:hover:bg-[#121c18] cursor-pointer"
+              className={`flex flex-col items-center justify-center gap-1 rounded-lg border py-2 px-2 text-[11px] font-medium cursor-pointer transition-colors ${
+                isDark
+                  ? "border-[#f4f7f5]/15 bg-[#0e1412] text-[#f4f7f5] hover:bg-[#121c18]"
+                  : "border-[#0b110e]/10 bg-[#f7f8f7] text-[#0b110e] hover:bg-[#eef1ef]"
+              }`}
             >
               {isDark ? (
                 <>
@@ -207,7 +234,11 @@ export function Header({
               type="button"
               onClick={onLogout}
               title="Keluar dari akun"
-              className="flex flex-col items-center justify-center gap-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 py-2 px-2 text-[11px] font-medium text-red-700 dark:border-red-500/20 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50 cursor-pointer"
+              className={`flex flex-col items-center justify-center gap-1 rounded-lg border py-2 px-2 text-[11px] font-medium cursor-pointer transition-colors ${
+                isDark
+                  ? "border-red-500/20 bg-red-950/30 text-red-300 hover:bg-red-950/50"
+                  : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+              }`}
             >
               <LogOut className="w-3.5 h-3.5" />
               {!collapsed && <span>Logout</span>}
@@ -217,14 +248,20 @@ export function Header({
       </aside>
 
       {/* Mobile Top Header */}
-      <header className="lg:hidden sticky top-0 z-40 w-full border-b border-[#0b110e]/10 bg-white/95 text-[#0b110e] backdrop-blur-md dark:border-[#f4f7f5]/10 dark:bg-[#070a09]/95 dark:text-[#f4f7f5]">
+      <header
+        className={`lg:hidden sticky top-0 z-40 w-full border-b backdrop-blur-md ${
+          isDark
+            ? "border-[#f4f7f5]/10 bg-[#070a09]/95 text-[#f4f7f5]"
+            : "border-[#0b110e]/10 bg-white/95 text-[#0b110e]"
+        }`}
+      >
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label="Buka menu"
-              className="p-1.5 rounded-md border border-[#0b110e]/10 dark:border-[#f4f7f5]/15"
+              className={`p-1.5 rounded-md border ${borderCls}`}
             >
               <Menu className="w-4 h-4" />
             </button>
@@ -247,7 +284,7 @@ export function Header({
               type="button"
               onClick={onToggleTheme}
               aria-label="Ganti tema"
-              className="p-2 rounded-md border border-[#0b110e]/10 dark:border-[#f4f7f5]/15"
+              className={`p-2 rounded-md border ${borderCls}`}
             >
               {isDark ? (
                 <Sun className="w-4 h-4 text-[#34d399]" />
@@ -274,9 +311,15 @@ export function Header({
             className="fixed inset-0 bg-black/60"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="relative z-10 w-64 max-w-[80vw] h-full flex flex-col justify-between bg-white text-[#0b110e] dark:bg-[#0b110e] dark:text-[#f4f7f5] border-r border-[#0b110e]/10 dark:border-[#f4f7f5]/10 p-4">
+          <div
+            className={`relative z-10 w-64 max-w-[80vw] h-full flex flex-col justify-between border-r p-4 ${
+              isDark
+                ? "bg-[#0b110e] text-[#f4f7f5] border-[#f4f7f5]/10"
+                : "bg-white text-[#0b110e] border-[#0b110e]/10"
+            }`}
+          >
             <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+              <div className={`flex items-center justify-between pb-3 border-b ${borderCls}`}>
                 <span className="font-display text-lg">KasKu</span>
                 <button
                   type="button"
@@ -287,19 +330,29 @@ export function Header({
                 </button>
               </div>
 
-              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-[#f7f8f7] dark:bg-[#0e1412]">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#10b981]/20 text-xs font-bold text-[#059669] dark:text-[#34d399]">
+              <button
+                type="button"
+                onClick={() => handleSelectTab("profile")}
+                className={`w-full text-left flex items-center gap-2.5 p-2 rounded-lg ${
+                  isDark ? "bg-[#0e1412]" : "bg-[#f7f8f7]"
+                }`}
+              >
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full bg-[#10b981]/20 text-xs font-bold ${
+                    isDark ? "text-[#34d399]" : "text-[#059669]"
+                  }`}
+                >
                   {userName ? userName.charAt(0).toUpperCase() : "U"}
                 </div>
                 <div className="min-w-0 leading-tight">
                   <div className="text-xs font-semibold truncate">{userName}</div>
                   {userEmail && (
-                    <div className="text-[11px] text-[#47544d] dark:text-[#a3b8ad] truncate">
+                    <div className={`text-[11px] truncate ${mutedCls}`}>
                       {userEmail}
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
 
               <nav className="space-y-1">
                 {NAV_ITEMS.map((item) => {
@@ -312,8 +365,10 @@ export function Header({
                       onClick={() => handleSelectTab(item.id)}
                       className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium ${
                         isActive
-                          ? "bg-[#ecfdf5] text-[#059669] font-semibold dark:bg-[#10b981]/15 dark:text-[#34d399]"
-                          : "text-[#47544d] dark:text-[#a3b8ad]"
+                          ? isDark
+                            ? "bg-[#10b981]/15 text-[#34d399] font-semibold"
+                            : "bg-[#ecfdf5] text-[#059669] font-semibold"
+                          : mutedCls
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -327,7 +382,11 @@ export function Header({
             <button
               type="button"
               onClick={onLogout}
-              className="w-full flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 py-2.5 text-xs font-medium text-red-700 dark:border-red-500/20 dark:bg-red-950/30 dark:text-red-300"
+              className={`w-full flex items-center justify-center gap-2 rounded-lg border py-2.5 text-xs font-medium ${
+                isDark
+                  ? "border-red-500/20 bg-red-950/30 text-red-300"
+                  : "border-red-200 bg-red-50 text-red-700"
+              }`}
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>

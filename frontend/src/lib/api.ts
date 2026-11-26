@@ -137,6 +137,7 @@ export async function apiFetch<T>(
   const doRequest = (accessToken: string) =>
     fetch(`${API_BASE_URL}${path}`, {
       ...options,
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),

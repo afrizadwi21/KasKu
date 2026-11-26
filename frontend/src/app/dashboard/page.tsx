@@ -12,7 +12,6 @@ import {
   Link2,
   PiggyBank,
   Plus,
-  RefreshCw,
   Search,
   ShoppingBag,
   Trash2,
@@ -170,8 +169,8 @@ export default function DashboardPage() {
   const [fetchingLink, setFetchingLink] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const loadAllData = useCallback(async () => {
-    setLoading(true);
+  const loadAllData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [
         meData,
@@ -262,6 +261,23 @@ export default function DashboardPage() {
     loadAllData();
   }, [router, loadAllData]);
 
+  // Real-time background sync every 5 seconds + on window focus/tab visible
+  useEffect(() => {
+    const syncNow = () => {
+      if (document.visibilityState === "visible" && getStoredAccessToken()) {
+        loadAllData(true);
+      }
+    };
+    const intervalId = setInterval(syncNow, 5000);
+    window.addEventListener("focus", syncNow);
+    document.addEventListener("visibilitychange", syncNow);
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", syncNow);
+      document.removeEventListener("visibilitychange", syncNow);
+    };
+  }, [loadAllData]);
+
   const handleToggleTheme = () => {
     setIsDark((prev) => {
       const next = !prev;
@@ -273,17 +289,25 @@ export default function DashboardPage() {
 
   const handleUpdateProfileName = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profileName.trim()) return;
+    const trimmed = profileName.trim();
+    if (!trimmed) return;
     setSavingProfile(true);
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      const updated = await apiFetch<UserProfile>("/api/me", {
+      const res = await apiFetch<{ message?: string; user?: UserProfile; name?: string }>("/api/me", {
         method: "PUT",
-        body: JSON.stringify({ name: profileName.trim() }),
+        body: JSON.stringify({ name: trimmed }),
       });
-      setUser((prev) => (prev ? { ...prev, name: updated.name } : updated));
+      const newName = res.user?.name || res.name || trimmed;
+      setUser((prev) => {
+        const nextUser = prev ? { ...prev, name: newName } : { id: "", name: newName, email: "" };
+        localStorage.setItem("kasku_user", JSON.stringify(nextUser));
+        return nextUser;
+      });
+      setProfileName(newName);
       setSuccessMsg("Profil berhasil diperbarui.");
+      await loadAllData(true);
     } catch (err: unknown) {
       setErrorMsg(
         err instanceof Error ? err.message : "Gagal memperbarui profil."
@@ -794,14 +818,20 @@ export default function DashboardPage() {
     debtStatusFilter === "aktif" ? d.sisa > 0 : d.sisa <= 0
   );
 
-  const inputClass =
-    "rounded-lg border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs text-[#0b110e] placeholder:text-[#47544d]/70 focus:border-[#10b981] focus:outline-none dark:border-[#f4f7f5]/15 dark:bg-[#070a09] dark:text-[#f4f7f5] dark:placeholder:text-[#a3b8ad]/50";
-  const cardClass =
-    "rounded-xl border border-[#0b110e]/10 bg-white dark:border-[#f4f7f5]/10 dark:bg-[#0e1412]";
+  const inputClass = isDark
+    ? "rounded-lg border border-[#f4f7f5]/15 bg-[#070a09] px-3 py-2 text-xs text-[#f4f7f5] placeholder:text-[#a3b8ad]/50 focus:border-[#10b981] focus:outline-none"
+    : "rounded-lg border border-[#0b110e]/15 bg-[#f7f8f7] px-3 py-2 text-xs text-[#0b110e] placeholder:text-[#47544d]/70 focus:border-[#10b981] focus:outline-none";
+  const cardClass = isDark
+    ? "rounded-xl border border-[#f4f7f5]/10 bg-[#0e1412] text-[#f4f7f5]"
+    : "rounded-xl border border-[#0b110e]/10 bg-white text-[#0b110e]";
 
   return (
     <div className={isDark ? "dark" : ""}>
-      <div className="min-h-screen flex flex-col lg:flex-row bg-[#f7f8f7] text-[#0b110e] dark:bg-[#070a09] dark:text-[#f4f7f5] transition-colors">
+      <div
+        className={`min-h-screen flex flex-col lg:flex-row transition-colors ${
+          isDark ? "bg-[#070a09] text-[#f4f7f5]" : "bg-[#f7f8f7] text-[#0b110e]"
+        }`}
+      >
         <Header
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -852,15 +882,10 @@ export default function DashboardPage() {
                     Data real dari akun {user.email}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={loadAllData}
-                  disabled={loading}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#0b110e]/15 bg-white px-3 py-1.5 text-xs font-medium hover:bg-[#eef1ef] dark:border-[#f4f7f5]/15 dark:bg-[#0e1412] dark:hover:bg-[#121c18] transition-colors cursor-pointer"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-                  <span>Segarkan</span>
-                </button>
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#10b981]/30 bg-[#10b981]/10 px-3 py-1 text-[11px] font-mono text-[#059669]">
+                  <span className="h-2 w-2 rounded-full bg-[#10b981] animate-pulse" />
+                  <span>Sinkronisasi Real-time</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -870,6 +895,7 @@ export default function DashboardPage() {
                   subtitle={`Kekayaan Bersih: ${formatRupiah(overview.kekayaan_bersih)}`}
                   badgeText="Kas Aktif"
                   badgeVariant="income"
+                  isDark={isDark}
                 />
                 <MetricCard
                   title="Masuk Hari Ini"
@@ -877,6 +903,7 @@ export default function DashboardPage() {
                   subtitle={`${todayData.pemasukan_per_sumber_hari_ini.length} sumber pemasukan`}
                   badgeText="Hari Ini"
                   badgeVariant="income"
+                  isDark={isDark}
                 />
                 <MetricCard
                   title="Keluar Hari Ini"
@@ -884,6 +911,7 @@ export default function DashboardPage() {
                   subtitle={`Selisih: ${todayData.selisih_hari_ini >= 0 ? "+" : ""}${formatRupiah(todayData.selisih_hari_ini)}`}
                   badgeText="Hari Ini"
                   badgeVariant="expense"
+                  isDark={isDark}
                 />
                 <MetricCard
                   title="Piutang Berjalan"
@@ -891,6 +919,7 @@ export default function DashboardPage() {
                   subtitle={`${piutangList.filter((d) => d.sisa > 0).length} orang belum lunas`}
                   badgeText={overview.piutang_total > 0 ? "Aktif" : "Kosong"}
                   badgeVariant="neutral"
+                  isDark={isDark}
                 />
               </div>
 
@@ -2304,18 +2333,21 @@ export default function DashboardPage() {
                     value={yearTotals.masuk}
                     badgeText="Masuk"
                     badgeVariant="income"
+                    isDark={isDark}
                   />
                   <MetricCard
                     title={`Total Pengeluaran (${analyticsYear})`}
                     value={yearTotals.keluar}
                     badgeText="Keluar"
                     badgeVariant="expense"
+                    isDark={isDark}
                   />
                   <MetricCard
                     title={`Selisih Bersih (${analyticsYear})`}
                     value={yearTotals.masuk - yearTotals.keluar}
                     badgeText={yearTotals.masuk >= yearTotals.keluar ? "Surplus" : "Defisit"}
                     badgeVariant={yearTotals.masuk >= yearTotals.keluar ? "income" : "expense"}
+                    isDark={isDark}
                   />
                 </div>
 
