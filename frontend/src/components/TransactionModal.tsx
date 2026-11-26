@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { TransactionItem } from "../types";
+import { getZodErrorMessage, transactionSchema } from "../lib/schemas";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export function TransactionModal({ isOpen, onClose, onSubmit }: TransactionModal
   const [note, setNote] = useState("");
   const [items, setItems] = useState<TransactionItem[]>([]);
   const [date, setDate] = useState("");
+  const [formError, setFormError] = useState("");
 
   React.useEffect(() => {
     if (isOpen && !date) {
@@ -69,14 +71,25 @@ export function TransactionModal({ isOpen, onClose, onSubmit }: TransactionModal
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
+    setFormError("");
+    const parsed = transactionSchema.safeParse({
       date,
       type,
       category,
+      amount: calculatedTotal,
+    });
+    if (!parsed.success) {
+      setFormError(getZodErrorMessage(parsed.error));
+      return;
+    }
+    onSubmit({
+      date: parsed.data.date,
+      type: parsed.data.type,
+      category: parsed.data.category,
       party,
       source: type === "masuk" ? (source || party) : "",
       note,
-      amount: calculatedTotal,
+      amount: parsed.data.amount,
       items: items.filter((it) => it.name.trim() !== ""),
     });
     onClose();
@@ -99,6 +112,11 @@ export function TransactionModal({ isOpen, onClose, onSubmit }: TransactionModal
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          {formError && (
+            <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {formError}
+            </div>
+          )}
           {/* Type Toggle */}
           <div className="grid grid-cols-2 gap-2 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800/60">
             <button

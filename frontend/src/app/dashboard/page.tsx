@@ -28,6 +28,16 @@ import {
   uploadWishlistImage,
 } from "../../lib/api";
 import {
+  billSchema,
+  debtPaymentSchema,
+  getZodErrorMessage,
+  profileNameSchema,
+  savingsMovementSchema,
+  savingsPotSchema,
+  subscriptionSchema,
+  wishlistSchema,
+} from "../../lib/schemas";
+import {
   Bill,
   DebtSummary,
   OverviewData,
@@ -307,8 +317,12 @@ export default function DashboardPage() {
 
   const handleUpdateProfileName = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = profileName.trim();
-    if (!trimmed) return;
+    const parsed = profileNameSchema.safeParse({ name: profileName });
+    if (!parsed.success) {
+      setErrorMsg(getZodErrorMessage(parsed.error));
+      return;
+    }
+    const trimmed = parsed.data.name;
     setSavingProfile(true);
     setErrorMsg("");
     setSuccessMsg("");
@@ -380,11 +394,15 @@ export default function DashboardPage() {
   const handleSubmitDebtPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeDebtPay) return;
-    const nominal = Number(debtPayAmount);
-    if (nominal <= 0) {
-      setErrorMsg("Nominal pembayaran harus lebih dari 0.");
+    const parsed = debtPaymentSchema.safeParse({
+      amount: Number(debtPayAmount),
+      note: debtPayNote,
+    });
+    if (!parsed.success) {
+      setErrorMsg(getZodErrorMessage(parsed.error));
       return;
     }
+    const nominal = parsed.data.amount;
 
     try {
       setErrorMsg("");
@@ -463,16 +481,21 @@ export default function DashboardPage() {
 
   const handleCreateSubscription = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsed = subscriptionSchema.safeParse({
+      name: subName,
+      amount: Number(subAmount),
+      cycle: subCycle,
+      first_due: subFirstDue,
+    });
+    if (!parsed.success) {
+      setErrorMsg(getZodErrorMessage(parsed.error));
+      return;
+    }
     try {
       setErrorMsg("");
       await apiFetch("/api/subscriptions", {
         method: "POST",
-        body: JSON.stringify({
-          name: subName.trim(),
-          amount: Number(subAmount),
-          cycle: subCycle,
-          first_due: subFirstDue,
-        }),
+        body: JSON.stringify(parsed.data),
       });
       setSubName("");
       setSubAmount("");
@@ -498,14 +521,21 @@ export default function DashboardPage() {
 
   const handleCreateBill = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsed = billSchema.safeParse({
+      title: billTitle,
+      amount: Number(billAmount),
+      due_date: billDueDate,
+    });
+    if (!parsed.success) {
+      setErrorMsg(getZodErrorMessage(parsed.error));
+      return;
+    }
     try {
       setErrorMsg("");
       await apiFetch("/api/bills", {
         method: "POST",
         body: JSON.stringify({
-          title: billTitle.trim(),
-          amount: Number(billAmount),
-          due_date: billDueDate,
+          ...parsed.data,
           note: "",
         }),
       });
@@ -519,14 +549,21 @@ export default function DashboardPage() {
 
   const handleCreateSavingsPot = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsed = savingsPotSchema.safeParse({
+      name: potName,
+      target_amount: Number(potTarget),
+    });
+    if (!parsed.success) {
+      setErrorMsg(getZodErrorMessage(parsed.error));
+      return;
+    }
     try {
       setErrorMsg("");
       setSuccessMsg("");
       await apiFetch("/api/savings", {
         method: "POST",
         body: JSON.stringify({
-          name: potName.trim(),
-          target_amount: Number(potTarget),
+          ...parsed.data,
           note: potNote.trim(),
         }),
       });
@@ -612,11 +649,14 @@ export default function DashboardPage() {
     potId: string,
     action: "deposit" | "withdraw"
   ) => {
-    const amount = Number(potActionAmounts[potId] || 0);
-    if (amount <= 0) {
-      setErrorMsg("Masukkan nominal lebih dari 0.");
+    const parsed = savingsMovementSchema.safeParse({
+      amount: Number(potActionAmounts[potId] || 0),
+    });
+    if (!parsed.success) {
+      setErrorMsg(getZodErrorMessage(parsed.error));
       return;
     }
+    const amount = parsed.data.amount;
     try {
       setErrorMsg("");
       setSuccessMsg("");
@@ -709,6 +749,16 @@ export default function DashboardPage() {
 
   const handleCreateWishlist = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsed = wishlistSchema.safeParse({
+      name: wishName,
+      price: Number(wishPrice),
+      priority: wishPriority,
+      link: wishLink || undefined,
+    });
+    if (!parsed.success) {
+      setErrorMsg(getZodErrorMessage(parsed.error));
+      return;
+    }
     try {
       setErrorMsg("");
       setSuccessMsg("");

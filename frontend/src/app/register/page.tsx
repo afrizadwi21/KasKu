@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, User, UserPlus } from "lucide-react";
 import { getStoredAccessToken, registerUser } from "../../lib/api";
+import { getZodErrorMessage, registerSchema } from "../../lib/schemas";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,9 +25,14 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const parsed = registerSchema.safeParse({ name, email, password });
+    if (!parsed.success) {
+      setError(getZodErrorMessage(parsed.error));
+      return;
+    }
     setLoading(true);
     try {
-      await registerUser(name.trim(), email.trim(), password);
+      await registerUser(parsed.data.name, parsed.data.email, parsed.data.password);
       router.replace("/dashboard");
     } catch (err: unknown) {
       setError(

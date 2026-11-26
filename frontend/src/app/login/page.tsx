@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { getStoredAccessToken, loginUser } from "../../lib/api";
+import { getZodErrorMessage, loginSchema } from "../../lib/schemas";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,9 +24,14 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const parsed = loginSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      setError(getZodErrorMessage(parsed.error));
+      return;
+    }
     setLoading(true);
     try {
-      await loginUser(email.trim(), password);
+      await loginUser(parsed.data.email, parsed.data.password);
       router.replace("/dashboard");
     } catch (err: unknown) {
       setError(
