@@ -975,9 +975,9 @@ export default function DashboardPage() {
     : "bg-[#0b110e] text-white hover:bg-[#10b981] hover:text-[#070a09]";
 
   return (
-    <div className={isDark ? "dark" : ""}>
+    <div className={`${isDark ? "dark" : ""} w-full max-w-[100vw] overflow-x-hidden`}>
       <div
-        className={`min-h-screen flex flex-col lg:flex-row transition-colors ${
+        className={`min-h-screen w-full max-w-[100vw] overflow-x-hidden flex flex-col lg:flex-row transition-colors ${
           isDark ? "bg-[#070a09] text-[#f4f7f5]" : "bg-[#f7f8f7] text-[#0b110e]"
         }`}
       >

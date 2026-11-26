@@ -398,13 +398,13 @@ export function Header({
       {/* Mobile Bottom Navigation Bar with Center Raised FAB */}
       <nav
         aria-label="Navigasi Bawah Mobile"
-        className={`lg:hidden fixed bottom-0 inset-x-0 z-40 rounded-t-2xl border-t shadow-[0_-8px_30px_-10px_rgba(0,0,0,0.18)] backdrop-blur-md ${
+        className={`lg:hidden fixed bottom-0 left-0 right-0 w-full max-w-[100vw] z-40 rounded-t-2xl border-t shadow-[0_-8px_30px_-10px_rgba(0,0,0,0.18)] backdrop-blur-md ${
           isDark
             ? "border-[#f4f7f5]/10 bg-[#0b110e]/95 text-[#f4f7f5]"
             : "border-[#0b110e]/10 bg-white/95 text-[#0b110e]"
         }`}
       >
-        <div className="grid grid-cols-5 items-end h-16 px-2 pb-1.5">
+        <div className="grid grid-cols-5 items-center h-16 px-2">
           {[
             { id: "dashboard", label: "Beranda", icon: LayoutDashboard },
             { id: "transactions", label: "Riwayat", icon: ListOrdered },
@@ -416,34 +416,34 @@ export function Header({
                 key={item.id}
                 type="button"
                 onClick={() => handleSelectTab(item.id)}
-                className={`flex flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-medium transition-colors ${
+                className={`h-full flex flex-col items-center justify-center gap-0.5 text-[10px] leading-none whitespace-nowrap transition-colors ${
                   isActive
                     ? isDark
                       ? "text-[#34d399] font-semibold"
                       : "text-[#059669] font-semibold"
-                    : mutedCls
+                    : `${mutedCls} font-medium`
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-4 h-4 shrink-0" />
                 <span>{item.label}</span>
               </button>
             );
           })}
 
           {/* Center Raised FAB */}
-          <div className="flex flex-col items-center justify-end -mt-6">
+          <div className="h-full flex flex-col items-center justify-end pb-1.5">
             <button
               type="button"
               onClick={onOpenModal}
               aria-label="Catat Kas"
-              className={`flex h-13 w-13 items-center justify-center rounded-full bg-[#10b981] text-[#070a09] shadow-lg ring-4 transition-transform active:scale-95 ${
+              className={`-mt-6 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#10b981] text-[#070a09] shadow-lg ring-4 transition-transform active:scale-95 ${
                 isDark ? "ring-[#070a09]" : "ring-[#f7f8f7]"
               }`}
             >
               <Plus className="w-6 h-6" />
             </button>
             <span
-              className={`mt-0.5 text-[10px] font-semibold ${
+              className={`mt-1 text-[10px] leading-none font-semibold whitespace-nowrap ${
                 isDark ? "text-[#34d399]" : "text-[#059669]"
               }`}
             >
@@ -462,15 +462,15 @@ export function Header({
                 key={item.id}
                 type="button"
                 onClick={() => handleSelectTab(item.id)}
-                className={`flex flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-medium transition-colors ${
+                className={`h-full flex flex-col items-center justify-center gap-0.5 text-[10px] leading-none whitespace-nowrap transition-colors ${
                   isActive
                     ? isDark
                       ? "text-[#34d399] font-semibold"
                       : "text-[#059669] font-semibold"
-                    : mutedCls
+                    : `${mutedCls} font-medium`
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-4 h-4 shrink-0" />
                 <span>{item.label}</span>
               </button>
             );
