@@ -62,8 +62,8 @@ export function LandingNavbar() {
               strokeLinecap="square"
             />
           </svg>
-          <span className="font-display text-lg font-semibold tracking-tight">
-            KasKu<span className="font-normal opacity-70 ml-1">Finance</span>
+          <span className="font-display text-xl tracking-tight">
+            KasKu
           </span>
         </Link>
 

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KasKu Finance — Manajemen Keuangan Pribadi yang Presisi",
-  description: "Catat arus kas, pisahkan saldo bebas & pos tabungan, simulasikan wishlist sebelum beli, dan pantau kekayaan bersih secara real-time.",
+  title: "KasKu",
+  description: "Catat uang masuk dan keluar, pisahkan uang jajan dari tabungan, dan simulasikan belanja sebelum uang keluar.",
 };
 
 export default function RootLayout({

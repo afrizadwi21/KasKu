@@ -89,8 +89,8 @@ export function LandingFooter() {
                 strokeLinecap="square"
               />
             </svg>
-            <span className="font-display text-base font-semibold tracking-tight">
-              KasKu Finance
+            <span className="font-display text-lg tracking-tight">
+              KasKu
             </span>
           </div>
           <p className="text-xs text-[#bbbcbc]">
@@ -117,7 +117,7 @@ export function LandingFooter() {
         </nav>
 
         <div className="text-xs text-white/50 font-mono">
-          © 2026 KasKu Finance
+          © 2026 KasKu
         </div>
       </div>
     </footer>
