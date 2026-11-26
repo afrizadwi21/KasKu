@@ -6,17 +6,31 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 
+	"kasku-backend/internal/auth"
+	"kasku-backend/internal/config"
 	"kasku-backend/internal/handlers"
 )
 
 func TestValidationErrors(t *testing.T) {
-	// Buat handler dengan DB nil untuk menguji validasi request payload
-	h := handlers.NewHandler(nil)
+	jwtSecret := "kasku_jwt_secret_key_minimum_32_characters_random_string"
+	cfg := &config.Config{
+		JWTSecret:         jwtSecret,
+		AllowRegistration: true,
+		AccessTTL:         15 * time.Minute,
+		RefreshTTL:        720 * time.Hour,
+	}
+
+	h := handlers.NewHandler(nil, cfg)
 	app := fiber.New()
-	h.RegisterRoutes(app, "")
+	h.RegisterRoutes(app)
+
+	// Buat access token valid untuk pengujian endpoint /api
+	token, _ := auth.GenerateAccessToken("user-test-uuid", jwtSecret, 15*time.Minute)
+	authHeader := "Bearer " + token
 
 	// 1. POST /api/transactions dengan kategori tidak sesuai -> 422
 	body1 := map[string]any{
@@ -29,6 +43,7 @@ func TestValidationErrors(t *testing.T) {
 	raw1, _ := json.Marshal(body1)
 	req1 := httptest.NewRequest("POST", "/api/transactions", bytes.NewReader(raw1))
 	req1.Header.Set("Content-Type", "application/json")
+	req1.Header.Set("Authorization", authHeader)
 	resp1, err := app.Test(req1)
 	if err != nil {
 		t.Fatalf("Gagal menjalankan request: %v", err)
@@ -53,6 +68,7 @@ func TestValidationErrors(t *testing.T) {
 	raw2, _ := json.Marshal(body2)
 	req2 := httptest.NewRequest("POST", "/api/transactions", bytes.NewReader(raw2))
 	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("Authorization", authHeader)
 	resp2, _ := app.Test(req2)
 	if resp2.StatusCode != http.StatusUnprocessableEntity {
 		t.Errorf("Ekspektasi 422 jika source kosong pada uang masuk, didapat %d", resp2.StatusCode)
@@ -68,6 +84,7 @@ func TestValidationErrors(t *testing.T) {
 	raw3, _ := json.Marshal(body3)
 	req3 := httptest.NewRequest("POST", "/api/transactions", bytes.NewReader(raw3))
 	req3.Header.Set("Content-Type", "application/json")
+	req3.Header.Set("Authorization", authHeader)
 	resp3, _ := app.Test(req3)
 	if resp3.StatusCode != http.StatusUnprocessableEntity {
 		t.Errorf("Ekspektasi 422 untuk format tanggal salah, didapat %d", resp3.StatusCode)
@@ -83,6 +100,7 @@ func TestValidationErrors(t *testing.T) {
 	raw4, _ := json.Marshal(body4)
 	req4 := httptest.NewRequest("POST", "/api/transactions", bytes.NewReader(raw4))
 	req4.Header.Set("Content-Type", "application/json")
+	req4.Header.Set("Authorization", authHeader)
 	resp4, _ := app.Test(req4)
 	if resp4.StatusCode != http.StatusUnprocessableEntity {
 		t.Errorf("Ekspektasi 422 untuk amount 0, didapat %d", resp4.StatusCode)
@@ -98,6 +116,7 @@ func TestValidationErrors(t *testing.T) {
 	raw5, _ := json.Marshal(body5)
 	req5 := httptest.NewRequest("POST", "/api/subscriptions", bytes.NewReader(raw5))
 	req5.Header.Set("Content-Type", "application/json")
+	req5.Header.Set("Authorization", authHeader)
 	resp5, _ := app.Test(req5)
 	if resp5.StatusCode != http.StatusUnprocessableEntity {
 		t.Errorf("Ekspektasi 422 untuk siklus langganan tidak valid, didapat %d", resp5.StatusCode)

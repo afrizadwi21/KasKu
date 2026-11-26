@@ -17,7 +17,10 @@ import (
 )
 
 func main() {
-	cfg := config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Konfigurasi server gagal: %v", err)
+	}
 
 	// Inisialisasi koneksi database PostgreSQL
 	database, err := db.ConnectDB(cfg.DatabaseURL)
@@ -32,7 +35,7 @@ func main() {
 	}
 
 	app := fiber.New(fiber.Config{
-		AppName: "KasKu API Server v1.0",
+		AppName: "KasKu Multi-User API Server v2.0",
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
@@ -45,15 +48,21 @@ func main() {
 	})
 
 	app.Use(recover.New())
-	app.Use(logger.New())
+
+	// Logger yang aman: tidak pernah mencatat body, password, atau token
+	app.Use(logger.New(logger.Config{
+		Format: "[${time}] ${status} - ${method} ${path} (${latency})\n",
+	}))
+
+	// CORS hanya untuk ALLOWED_ORIGIN yang ditentukan
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: cfg.AllowedOrigin,
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Secret-Token",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
 	}))
 
-	h := handlers.NewHandler(database)
-	h.RegisterRoutes(app, cfg.SecretToken)
+	h := handlers.NewHandler(database, cfg)
+	h.RegisterRoutes(app)
 
 	// Graceful shutdown handling
 	go func() {
@@ -64,7 +73,7 @@ func main() {
 		_ = app.Shutdown()
 	}()
 
-	log.Printf("KasKu API Server berjalan pada port :%s ...", cfg.Port)
+	log.Printf("KasKu Multi-User API Server berjalan pada port :%s ...", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {
 		log.Fatalf("Server berhenti: %v", err)
 	}

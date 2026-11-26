@@ -7,12 +7,33 @@ import (
 )
 
 // RegisterRoutes mendaftarkan seluruh rute endpoint API KasKu
-func (h *Handler) RegisterRoutes(app *fiber.App, secretToken string) {
+func (h *Handler) RegisterRoutes(app *fiber.App) {
+	// Header keamanan dasar untuk semua respons
+	app.Use(middleware.SecurityHeaders())
+
 	// Health check (publik, tanpa otentikasi)
 	app.Get("/healthz", h.Healthz)
 
-	// API Group dengan pengamanan Token Rahasia (single user)
-	api := app.Group("/api", middleware.TokenAuth(secretToken))
+	// Auth Group (publik, tanpa otentikasi)
+	authGroup := app.Group("/auth")
+	authGroup.Post("/register", h.Register)
+	authGroup.Post("/login", h.Login)
+	authGroup.Post("/refresh", h.RefreshToken)
+	authGroup.Post("/logout", h.Logout)
+
+	// API Group dengan pengamanan JWT Access Token
+	jwtSecret := ""
+	if h.Config != nil {
+		jwtSecret = h.Config.JWTSecret
+	}
+	api := app.Group("/api", middleware.JWTAuth(h.DB, jwtSecret))
+
+	// Akun Pengguna (/api/me)
+	api.Get("/me", h.GetMe)
+	api.Put("/me", h.UpdateMe)
+	api.Put("/me/password", h.ChangePassword)
+	api.Delete("/me", h.DeleteMe)
+	api.Post("/me/logout-all", h.LogoutAll)
 
 	// 1. Transaksi
 	api.Get("/transactions", h.GetTransactions)

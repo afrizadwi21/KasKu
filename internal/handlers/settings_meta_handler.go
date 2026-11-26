@@ -8,11 +8,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"kasku-backend/internal/calc"
+	"kasku-backend/internal/middleware"
 )
 
 // GetOpeningBalanceSetting menangani GET /api/settings/opening-balance
 func (h *Handler) GetOpeningBalanceSetting(c *fiber.Ctx) error {
-	balance, err := h.GetOpeningBalance()
+	userID := middleware.GetUserID(c)
+	balance, err := h.GetOpeningBalance(userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membaca saldo awal")
 	}
@@ -23,6 +25,7 @@ func (h *Handler) GetOpeningBalanceSetting(c *fiber.Ctx) error {
 
 // UpdateOpeningBalanceSetting menangani PUT /api/settings/opening-balance
 func (h *Handler) UpdateOpeningBalanceSetting(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	type inputBody struct {
 		OpeningBalance *int64 `json:"opening_balance"`
 	}
@@ -33,10 +36,10 @@ func (h *Handler) UpdateOpeningBalanceSetting(c *fiber.Ctx) error {
 
 	valStr := strconv.FormatInt(*body.OpeningBalance, 10)
 	_, err := h.DB.Exec(`
-		INSERT INTO settings (key, value)
-		VALUES ('opening_balance', $1)
-		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-	`, valStr)
+		INSERT INTO settings (user_id, key, value)
+		VALUES ($1, 'opening_balance', $2)
+		ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value
+	`, userID, valStr)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menyimpan saldo awal")
 	}
@@ -49,6 +52,7 @@ func (h *Handler) UpdateOpeningBalanceSetting(c *fiber.Ctx) error {
 
 // ExportCSV menangani GET /api/export.csv
 func (h *Handler) ExportCSV(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	rows, err := h.DB.Query(`
 		SELECT t.id, t.date, t.type, t.category, t.party, t.source, t.note, t.amount,
 		       COALESCE(
@@ -56,8 +60,9 @@ func (h *Handler) ExportCSV(c *fiber.Ctx) error {
 		            FROM transaction_items ti WHERE ti.transaction_id = t.id), ''
 		       ) AS rincian_item
 		FROM transactions t
+		WHERE t.user_id = $1
 		ORDER BY t.date ASC, t.created_at ASC, t.id ASC
-	`)
+	`, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menyiapkan data ekspor CSV")
 	}
@@ -66,7 +71,6 @@ func (h *Handler) ExportCSV(c *fiber.Ctx) error {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 
-	// Header CSV
 	header := []string{"ID", "Tanggal", "Jenis", "Kategori", "Pihak (Party)", "Sumber (Source)", "Keterangan (Note)", "Nominal (Amount)", "Rincian Item"}
 	if err := writer.Write(header); err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menulis header CSV")
@@ -105,8 +109,9 @@ func (h *Handler) ExportCSV(c *fiber.Ctx) error {
 
 // GetMeta menangani GET /api/meta
 func (h *Handler) GetMeta(c *fiber.Ctx) error {
-	// Ambil daftar party unik
-	partyRows, err := h.DB.Query("SELECT DISTINCT TRIM(party) FROM transactions WHERE TRIM(party) <> '' ORDER BY TRIM(party) ASC")
+	userID := middleware.GetUserID(c)
+
+	partyRows, err := h.DB.Query("SELECT DISTINCT TRIM(party) FROM transactions WHERE user_id = $1 AND TRIM(party) <> '' ORDER BY TRIM(party) ASC", userID)
 	parties := make([]string, 0)
 	if err == nil {
 		defer partyRows.Close()
@@ -118,8 +123,7 @@ func (h *Handler) GetMeta(c *fiber.Ctx) error {
 		}
 	}
 
-	// Ambil daftar source unik
-	sourceRows, err := h.DB.Query("SELECT DISTINCT TRIM(source) FROM transactions WHERE TRIM(source) <> '' ORDER BY TRIM(source) ASC")
+	sourceRows, err := h.DB.Query("SELECT DISTINCT TRIM(source) FROM transactions WHERE user_id = $1 AND TRIM(source) <> '' ORDER BY TRIM(source) ASC", userID)
 	sources := make([]string, 0)
 	if err == nil {
 		defer sourceRows.Close()

@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"kasku-backend/internal/calc"
+	"kasku-backend/internal/middleware"
 )
 
 type ItemInput struct {
@@ -56,6 +57,8 @@ type TransactionResponse struct {
 
 // GetTransactions menangani GET /api/transactions
 func (h *Handler) GetTransactions(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+
 	from := c.Query("from")
 	to := c.Query("to")
 	txType := c.Query("type")
@@ -66,13 +69,12 @@ func (h *Handler) GetTransactions(c *fiber.Ctx) error {
 	limitStr := c.Query("limit")
 	offsetStr := c.Query("offset")
 
-	openingBalance, err := h.GetOpeningBalance()
+	openingBalance, err := h.GetOpeningBalance(userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil saldo awal")
 	}
 
-	// Hitung saldo berjalan secara kronologis (date ASC, created_at ASC, id ASC)
-	// Kemudian baris diurutkan secara tanggal desc untuk hasil client
+	// Hitung saldo berjalan hanya untuk transaksi user ini secara kronologis
 	baseQuery := fmt.Sprintf(`
 		WITH calculated AS (
 			SELECT 
@@ -91,6 +93,7 @@ func (h *Handler) GetTransactions(c *fiber.Ctx) error {
 				) AS saldo_setelah,
 				COALESCE((SELECT COUNT(*) FROM transaction_items ti WHERE ti.transaction_id = t.id), 0) AS jumlah_item
 			FROM transactions t
+			WHERE t.user_id = $1
 		)
 		SELECT id, date, type, category, party, source, note, amount, created_at, saldo_setelah, jumlah_item
 		FROM calculated
@@ -98,8 +101,8 @@ func (h *Handler) GetTransactions(c *fiber.Ctx) error {
 	`, openingBalance)
 
 	var conditions []string
-	var args []any
-	argIndex := 1
+	args := []any{userID}
+	argIndex := 2
 
 	if from != "" {
 		if _, err := ParseDate(from); err != nil {
@@ -212,12 +215,13 @@ func (h *Handler) GetTransactions(c *fiber.Ctx) error {
 
 // GetTransactionByID menangani GET /api/transactions/:id
 func (h *Handler) GetTransactionByID(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID transaksi tidak valid")
 	}
 
-	openingBalance, err := h.GetOpeningBalance()
+	openingBalance, err := h.GetOpeningBalance(userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil saldo awal")
 	}
@@ -240,15 +244,16 @@ func (h *Handler) GetTransactionByID(c *fiber.Ctx) error {
 				) AS saldo_setelah,
 				COALESCE((SELECT COUNT(*) FROM transaction_items ti WHERE ti.transaction_id = t.id), 0) AS jumlah_item
 			FROM transactions t
+			WHERE t.user_id = $1
 		)
 		SELECT id, date, type, category, party, source, note, amount, created_at, saldo_setelah, jumlah_item
 		FROM calculated
-		WHERE id = $1
+		WHERE id = $2
 	`, openingBalance)
 
 	var txResp TransactionResponse
 	var dateVal time.Time
-	err = h.DB.QueryRow(query, id).Scan(
+	err = h.DB.QueryRow(query, userID, id).Scan(
 		&txResp.ID,
 		&dateVal,
 		&txResp.Type,
@@ -263,14 +268,21 @@ func (h *Handler) GetTransactionByID(c *fiber.Ctx) error {
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			// Akses ke data milik user lain atau tidak ada menghasilkan 404
 			return ErrorResponse(c, fiber.StatusNotFound, "Transaksi tidak ditemukan")
 		}
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil data transaksi")
 	}
 	txResp.Date = dateVal.Format("2006-01-02")
 
-	// Ambil rincian items
-	itemRows, err := h.DB.Query("SELECT id, name, qty, unit_price, subtotal FROM transaction_items WHERE transaction_id = $1 ORDER BY id ASC", id)
+	// Ambil rincian items dengan JOIN transactions untuk memastikan isolasi user
+	itemRows, err := h.DB.Query(`
+		SELECT ti.id, ti.name, ti.qty, ti.unit_price, ti.subtotal 
+		FROM transaction_items ti
+		JOIN transactions t ON ti.transaction_id = t.id
+		WHERE ti.transaction_id = $1 AND t.user_id = $2
+		ORDER BY ti.id ASC
+	`, id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil rincian item")
 	}
@@ -291,19 +303,16 @@ func (h *Handler) GetTransactionByID(c *fiber.Ctx) error {
 
 // validateAndPrepareTx validasi dan persiapan data transaksi
 func validateAndPrepareTx(input *TransactionInput) (*time.Time, int64, []ItemResponse, error) {
-	// Validasi tanggal
 	parsedDate, err := ParseDate(input.Date)
 	if err != nil {
 		return nil, 0, nil, fmt.Errorf("Format tanggal tidak valid (gunakan YYYY-MM-DD)")
 	}
 
-	// Validasi type
 	input.Type = strings.TrimSpace(input.Type)
 	if input.Type != "masuk" && input.Type != "keluar" {
 		return nil, 0, nil, fmt.Errorf("Jenis transaksi harus 'masuk' atau 'keluar'")
 	}
 
-	// Validasi kategori
 	input.Category = strings.TrimSpace(input.Category)
 	if !calc.IsValidCategory(input.Type, input.Category) {
 		return nil, 0, nil, fmt.Errorf("Kategori tidak valid untuk jenis transaksi '%s'", input.Type)
@@ -313,9 +322,7 @@ func validateAndPrepareTx(input *TransactionInput) (*time.Time, int64, []ItemRes
 	input.Source = strings.TrimSpace(input.Source)
 	input.Note = strings.TrimSpace(input.Note)
 
-	// Aturan source:
 	if input.Type == "masuk" {
-		// Jika kategori "Terima Bayar Hutang" atau "Pinjam dari Orang" dan source kosong, isi otomatis dengan party
 		if (input.Category == "Terima Bayar Hutang" || input.Category == "Pinjam dari Orang") && input.Source == "" {
 			input.Source = input.Party
 		}
@@ -323,11 +330,9 @@ func validateAndPrepareTx(input *TransactionInput) (*time.Time, int64, []ItemRes
 			return nil, 0, nil, fmt.Errorf("Sumber dana (source) wajib diisi untuk uang masuk")
 		}
 	} else {
-		// Untuk type 'keluar', source dikosongkan
 		input.Source = ""
 	}
 
-	// Hitung items dan amount
 	var finalAmount int64
 	var preparedItems []ItemResponse
 
@@ -369,6 +374,8 @@ func validateAndPrepareTx(input *TransactionInput) (*time.Time, int64, []ItemRes
 
 // CreateTransaction menangani POST /api/transactions
 func (h *Handler) CreateTransaction(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+
 	var input TransactionInput
 	if err := c.BodyParser(&input); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format JSON tidak valid")
@@ -390,9 +397,9 @@ func (h *Handler) CreateTransaction(c *fiber.Ctx) error {
 	now := time.Now()
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO transactions (id, date, type, category, party, source, note, amount, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, newID, parsedDate.Format("2006-01-02"), input.Type, input.Category, input.Party, input.Source, input.Note, finalAmount, now)
+		INSERT INTO transactions (id, user_id, date, type, category, party, source, note, amount, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, newID, userID, parsedDate.Format("2006-01-02"), input.Type, input.Category, input.Party, input.Source, input.Note, finalAmount, now)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menyimpan transaksi: "+err.Error())
 	}
@@ -421,6 +428,7 @@ func (h *Handler) CreateTransaction(c *fiber.Ctx) error {
 
 // UpdateTransaction menangani PUT /api/transactions/:id
 func (h *Handler) UpdateTransaction(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID transaksi tidak valid")
@@ -443,9 +451,9 @@ func (h *Handler) UpdateTransaction(c *fiber.Ctx) error {
 	}
 	defer tx.Rollback()
 
-	// Pastikan transaksi ada
+	// Pastikan transaksi ada dan dimiliki oleh user yang bersangkutan (return 404 jika bukan milik user)
 	var exists bool
-	err = tx.QueryRowContext(ctx, "SELECT true FROM transactions WHERE id = $1", id).Scan(&exists)
+	err = tx.QueryRowContext(ctx, "SELECT true FROM transactions WHERE id = $1 AND user_id = $2", id, userID).Scan(&exists)
 	if err != nil || !exists {
 		return ErrorResponse(c, fiber.StatusNotFound, "Transaksi tidak ditemukan")
 	}
@@ -453,13 +461,13 @@ func (h *Handler) UpdateTransaction(c *fiber.Ctx) error {
 	_, err = tx.ExecContext(ctx, `
 		UPDATE transactions
 		SET date = $1, type = $2, category = $3, party = $4, source = $5, note = $6, amount = $7
-		WHERE id = $8
-	`, parsedDate.Format("2006-01-02"), input.Type, input.Category, input.Party, input.Source, input.Note, finalAmount, id)
+		WHERE id = $8 AND user_id = $9
+	`, parsedDate.Format("2006-01-02"), input.Type, input.Category, input.Party, input.Source, input.Note, finalAmount, id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal memperbarui transaksi: "+err.Error())
 	}
 
-	// Ganti semua item transaksi (PUT mengganti seluruh item)
+	// Ganti seluruh item
 	_, err = tx.ExecContext(ctx, "DELETE FROM transaction_items WHERE transaction_id = $1", id)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal memperbarui rincian item")
@@ -489,12 +497,13 @@ func (h *Handler) UpdateTransaction(c *fiber.Ctx) error {
 
 // DeleteTransaction menangani DELETE /api/transactions/:id
 func (h *Handler) DeleteTransaction(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID transaksi tidak valid")
 	}
 
-	result, err := h.DB.Exec("DELETE FROM transactions WHERE id = $1", id)
+	result, err := h.DB.Exec("DELETE FROM transactions WHERE id = $1 AND user_id = $2", id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghapus transaksi")
 	}

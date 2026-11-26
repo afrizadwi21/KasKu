@@ -8,11 +8,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"kasku-backend/internal/calc"
+	"kasku-backend/internal/middleware"
 )
 
 // GetDebts menangani GET /api/debts
 func (h *Handler) GetDebts(c *fiber.Ctx) error {
-	rows, err := h.DB.Query("SELECT date, type, category, party, source, amount FROM transactions")
+	userID := middleware.GetUserID(c)
+
+	rows, err := h.DB.Query("SELECT date, type, category, party, source, amount FROM transactions WHERE user_id = $1", userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membaca data transaksi")
 	}
@@ -37,6 +40,7 @@ func (h *Handler) GetDebts(c *fiber.Ctx) error {
 
 // GetDebtsByPerson menangani GET /api/debts/:nama
 func (h *Handler) GetDebtsByPerson(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	nama := c.Params("nama")
 	if strings.TrimSpace(nama) == "" {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Parameter nama tidak boleh kosong")
@@ -46,9 +50,9 @@ func (h *Handler) GetDebtsByPerson(c *fiber.Ctx) error {
 		SELECT id, date, type, category, party, source, note, amount, created_at,
 		       COALESCE((SELECT COUNT(*) FROM transaction_items ti WHERE ti.transaction_id = transactions.id), 0) AS jumlah_item
 		FROM transactions
-		WHERE LOWER(TRIM(party)) = LOWER(TRIM($1))
+		WHERE user_id = $1 AND LOWER(TRIM(party)) = LOWER(TRIM($2))
 		ORDER BY date DESC, created_at DESC, id DESC
-	`, nama)
+	`, userID, nama)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil riwayat transaksi")
 	}
@@ -107,11 +111,11 @@ type UnpaidItem struct {
 
 // GetUnpaid menangani GET /api/unpaid
 func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	today := time.Now()
-	todayStr := today.Format("2006-01-02")
 
-	// 1. Ambil transaksi untuk piutang dan hutang_saya
-	rows, err := h.DB.Query("SELECT date, type, category, party, source, amount FROM transactions")
+	// 1. Transaksi untuk piutang dan hutang_saya
+	rows, err := h.DB.Query("SELECT date, type, category, party, source, amount FROM transactions WHERE user_id = $1", userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membaca transaksi")
 	}
@@ -127,7 +131,6 @@ func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
 
 	unpaidItems := make([]UnpaidItem, 0)
 
-	// Piutang belum lunas (orang berhutang ke Anda)
 	for _, p := range calc.CalculatePiutang(allTxs) {
 		if p.Sisa > 0 {
 			unpaidItems = append(unpaidItems, UnpaidItem{
@@ -141,7 +144,6 @@ func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
 		}
 	}
 
-	// Hutang saya belum lunas (Anda berhutang ke orang lain)
 	for _, hs := range calc.CalculateHutangSaya(allTxs) {
 		if hs.Sisa > 0 {
 			unpaidItems = append(unpaidItems, UnpaidItem{
@@ -156,7 +158,7 @@ func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
 	}
 
 	// 2. Langganan aktif yang belum dibayar / segera jatuh tempo
-	subRows, err := h.DB.Query("SELECT id, name, amount, cycle, first_due FROM subscriptions WHERE active = true")
+	subRows, err := h.DB.Query("SELECT id, name, amount, cycle, first_due FROM subscriptions WHERE user_id = $1 AND active = true", userID)
 	if err == nil {
 		defer subRows.Close()
 		for subRows.Next() {
@@ -167,8 +169,8 @@ func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
 				var count int
 				_ = h.DB.QueryRow(`
 					SELECT COUNT(*) FROM transactions 
-					WHERE type = 'keluar' AND category = 'Langganan' AND LOWER(TRIM(party)) = LOWER(TRIM($1))
-				`, name).Scan(&count)
+					WHERE user_id = $1 AND type = 'keluar' AND category = 'Langganan' AND LOWER(TRIM(party)) = LOWER(TRIM($2))
+				`, userID, name).Scan(&count)
 
 				stat := calc.CalculateSubscriptionStatus(firstDue, cycle, count, today)
 				if stat.Status == "Belum Dibayar" || stat.Status == "Segera Jatuh Tempo" {
@@ -186,7 +188,7 @@ func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
 	}
 
 	// 3. Tagihan belum dibayar
-	billRows, err := h.DB.Query("SELECT title, amount, due_date FROM bills WHERE paid = false")
+	billRows, err := h.DB.Query("SELECT title, amount, due_date FROM bills WHERE user_id = $1 AND paid = false", userID)
 	if err == nil {
 		defer billRows.Close()
 		for billRows.Next() {
@@ -207,10 +209,6 @@ func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
 		}
 	}
 
-	// Urutkan paling mendesak:
-	// Prioritas 1: Telat paling lama (telat_hari DESC)
-	// Prioritas 2: Status Segera Jatuh Tempo / Belum Dibayar
-	// Prioritas 3: Jumlah terbesar
 	sort.SliceStable(unpaidItems, func(i, j int) bool {
 		if unpaidItems[i].TelatHari != unpaidItems[j].TelatHari {
 			return unpaidItems[i].TelatHari > unpaidItems[j].TelatHari
@@ -220,8 +218,6 @@ func (h *Handler) GetUnpaid(c *fiber.Ctx) error {
 		}
 		return unpaidItems[i].Jumlah > unpaidItems[j].Jumlah
 	})
-
-	_ = todayStr
 
 	return c.JSON(unpaidItems)
 }

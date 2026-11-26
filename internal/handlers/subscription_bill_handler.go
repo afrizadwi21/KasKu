@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"kasku-backend/internal/calc"
+	"kasku-backend/internal/middleware"
 )
 
 type SubscriptionInput struct {
@@ -39,13 +40,15 @@ type SubscriptionResponse struct {
 
 // GetSubscriptions menangani GET /api/subscriptions
 func (h *Handler) GetSubscriptions(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	today := time.Now()
 
 	rows, err := h.DB.Query(`
 		SELECT id, name, amount, cycle, first_due, active, created_at
 		FROM subscriptions
+		WHERE user_id = $1
 		ORDER BY created_at DESC
-	`)
+	`, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil daftar langganan")
 	}
@@ -60,15 +63,14 @@ func (h *Handler) GetSubscriptions(c *fiber.Ctx) error {
 		}
 		sub.FirstDue = firstDueVal.Format("2006-01-02")
 
-		// Hitung riwayat transaksi langganan ini
 		var count int
 		var totalAmount int64
 		var lastPaid sql.NullTime
 		_ = h.DB.QueryRow(`
 			SELECT COUNT(*), COALESCE(SUM(amount), 0), MAX(date)
 			FROM transactions
-			WHERE type = 'keluar' AND category = 'Langganan' AND LOWER(TRIM(party)) = LOWER(TRIM($1))
-		`, sub.Name).Scan(&count, &totalAmount, &lastPaid)
+			WHERE user_id = $1 AND type = 'keluar' AND category = 'Langganan' AND LOWER(TRIM(party)) = LOWER(TRIM($2))
+		`, userID, sub.Name).Scan(&count, &totalAmount, &lastPaid)
 
 		sub.TotalKaliBayar = count
 		sub.TotalDibayar = totalAmount
@@ -90,6 +92,8 @@ func (h *Handler) GetSubscriptions(c *fiber.Ctx) error {
 
 // CreateSubscription menangani POST /api/subscriptions
 func (h *Handler) CreateSubscription(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+
 	var input SubscriptionInput
 	if err := c.BodyParser(&input); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format JSON tidak valid")
@@ -117,9 +121,9 @@ func (h *Handler) CreateSubscription(c *fiber.Ctx) error {
 
 	newID := uuid.New().String()
 	_, err = h.DB.Exec(`
-		INSERT INTO subscriptions (id, name, amount, cycle, first_due, active, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, now())
-	`, newID, name, input.Amount, cycle, parsedFirstDue.Format("2006-01-02"), active)
+		INSERT INTO subscriptions (id, user_id, name, amount, cycle, first_due, active, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+	`, newID, userID, name, input.Amount, cycle, parsedFirstDue.Format("2006-01-02"), active)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membuat data langganan: "+err.Error())
 	}
@@ -132,6 +136,7 @@ func (h *Handler) CreateSubscription(c *fiber.Ctx) error {
 
 // UpdateSubscription menangani PUT /api/subscriptions/:id
 func (h *Handler) UpdateSubscription(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID langganan tidak valid")
@@ -166,8 +171,8 @@ func (h *Handler) UpdateSubscription(c *fiber.Ctx) error {
 	result, err := h.DB.Exec(`
 		UPDATE subscriptions
 		SET name = $1, amount = $2, cycle = $3, first_due = $4, active = $5
-		WHERE id = $6
-	`, name, input.Amount, cycle, parsedFirstDue.Format("2006-01-02"), active, id)
+		WHERE id = $6 AND user_id = $7
+	`, name, input.Amount, cycle, parsedFirstDue.Format("2006-01-02"), active, id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal memperbarui langganan")
 	}
@@ -185,12 +190,13 @@ func (h *Handler) UpdateSubscription(c *fiber.Ctx) error {
 
 // DeleteSubscription menangani DELETE /api/subscriptions/:id (DELETE = nonaktifkan)
 func (h *Handler) DeleteSubscription(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID langganan tidak valid")
 	}
 
-	result, err := h.DB.Exec("UPDATE subscriptions SET active = false WHERE id = $1", id)
+	result, err := h.DB.Exec("UPDATE subscriptions SET active = false WHERE id = $1 AND user_id = $2", id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menonaktifkan langganan")
 	}
@@ -206,8 +212,8 @@ func (h *Handler) DeleteSubscription(c *fiber.Ctx) error {
 }
 
 // PaySubscription menangani POST /api/subscriptions/:id/pay
-// Buat transaksi keluar kategori "Langganan", party = nama, tanggal hari ini (satu DB transaction)
 func (h *Handler) PaySubscription(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID langganan tidak valid")
@@ -223,7 +229,7 @@ func (h *Handler) PaySubscription(c *fiber.Ctx) error {
 	var name string
 	var amount int64
 	var active bool
-	err = tx.QueryRowContext(ctx, "SELECT name, amount, active FROM subscriptions WHERE id = $1", id).Scan(&name, &amount, &active)
+	err = tx.QueryRowContext(ctx, "SELECT name, amount, active FROM subscriptions WHERE id = $1 AND user_id = $2", id, userID).Scan(&name, &amount, &active)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrorResponse(c, fiber.StatusNotFound, "Langganan tidak ditemukan")
@@ -235,9 +241,9 @@ func (h *Handler) PaySubscription(c *fiber.Ctx) error {
 	txID := uuid.New().String()
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO transactions (id, date, type, category, party, source, note, amount, created_at)
-		VALUES ($1, $2, 'keluar', 'Langganan', $3, '', $4, $5, now())
-	`, txID, todayStr, name, "Pembayaran rutin langganan "+name, amount)
+		INSERT INTO transactions (id, user_id, date, type, category, party, source, note, amount, created_at)
+		VALUES ($1, $2, $3, 'keluar', 'Langganan', $4, '', $5, $6, now())
+	`, txID, userID, todayStr, name, "Pembayaran rutin langganan "+name, amount)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membuat transaksi pembayaran langganan: "+err.Error())
 	}
@@ -254,7 +260,6 @@ func (h *Handler) PaySubscription(c *fiber.Ctx) error {
 	})
 }
 
-// BillInput model input tagihan
 type BillInput struct {
 	Title   string `json:"title"`
 	Amount  int64  `json:"amount"`
@@ -277,13 +282,15 @@ type BillResponse struct {
 
 // GetBills menangani GET /api/bills
 func (h *Handler) GetBills(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	today := time.Now()
 
 	rows, err := h.DB.Query(`
 		SELECT id, title, amount, due_date, paid, paid_at, note, created_at
 		FROM bills
+		WHERE user_id = $1
 		ORDER BY paid ASC, due_date ASC, created_at DESC
-	`)
+	`, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil daftar tagihan")
 	}
@@ -314,6 +321,8 @@ func (h *Handler) GetBills(c *fiber.Ctx) error {
 
 // CreateBill menangani POST /api/bills
 func (h *Handler) CreateBill(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+
 	var input BillInput
 	if err := c.BodyParser(&input); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format JSON tidak valid")
@@ -333,9 +342,9 @@ func (h *Handler) CreateBill(c *fiber.Ctx) error {
 
 	newID := uuid.New().String()
 	_, err = h.DB.Exec(`
-		INSERT INTO bills (id, title, amount, due_date, paid, note, created_at)
-		VALUES ($1, $2, $3, $4, false, $5, now())
-	`, newID, title, input.Amount, dueDate.Format("2006-01-02"), strings.TrimSpace(input.Note))
+		INSERT INTO bills (id, user_id, title, amount, due_date, paid, note, created_at)
+		VALUES ($1, $2, $3, $4, $5, false, $6, now())
+	`, newID, userID, title, input.Amount, dueDate.Format("2006-01-02"), strings.TrimSpace(input.Note))
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membuat tagihan: "+err.Error())
 	}
@@ -348,6 +357,7 @@ func (h *Handler) CreateBill(c *fiber.Ctx) error {
 
 // UpdateBill menangani PUT /api/bills/:id
 func (h *Handler) UpdateBill(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID tagihan tidak valid")
@@ -373,8 +383,8 @@ func (h *Handler) UpdateBill(c *fiber.Ctx) error {
 	result, err := h.DB.Exec(`
 		UPDATE bills
 		SET title = $1, amount = $2, due_date = $3, note = $4
-		WHERE id = $5
-	`, title, input.Amount, dueDate.Format("2006-01-02"), strings.TrimSpace(input.Note), id)
+		WHERE id = $5 AND user_id = $6
+	`, title, input.Amount, dueDate.Format("2006-01-02"), strings.TrimSpace(input.Note), id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal memperbarui tagihan")
 	}
@@ -392,12 +402,13 @@ func (h *Handler) UpdateBill(c *fiber.Ctx) error {
 
 // DeleteBill menangani DELETE /api/bills/:id
 func (h *Handler) DeleteBill(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID tagihan tidak valid")
 	}
 
-	result, err := h.DB.Exec("DELETE FROM bills WHERE id = $1", id)
+	result, err := h.DB.Exec("DELETE FROM bills WHERE id = $1 AND user_id = $2", id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghapus tagihan")
 	}
@@ -413,8 +424,8 @@ func (h *Handler) DeleteBill(c *fiber.Ctx) error {
 }
 
 // PayBill menangani POST /api/bills/:id/pay
-// Set paid = true, paid_at = now() + buat transaksi keluar kategori "Tagihan" (satu DB transaction)
 func (h *Handler) PayBill(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	id := c.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrorResponse(c, fiber.StatusBadRequest, "Format ID tagihan tidak valid")
@@ -430,7 +441,7 @@ func (h *Handler) PayBill(c *fiber.Ctx) error {
 	var title, note string
 	var amount int64
 	var paid bool
-	err = tx.QueryRowContext(ctx, "SELECT title, amount, paid, note FROM bills WHERE id = $1", id).Scan(&title, &amount, &paid, &note)
+	err = tx.QueryRowContext(ctx, "SELECT title, amount, paid, note FROM bills WHERE id = $1 AND user_id = $2", id, userID).Scan(&title, &amount, &paid, &note)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrorResponse(c, fiber.StatusNotFound, "Tagihan tidak ditemukan")
@@ -446,17 +457,15 @@ func (h *Handler) PayBill(c *fiber.Ctx) error {
 	todayStr := now.Format("2006-01-02")
 	txID := uuid.New().String()
 
-	// Update tagihan
-	_, err = tx.ExecContext(ctx, "UPDATE bills SET paid = true, paid_at = $1 WHERE id = $2", now, id)
+	_, err = tx.ExecContext(ctx, "UPDATE bills SET paid = true, paid_at = $1 WHERE id = $2 AND user_id = $3", now, id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal memperbarui status tagihan")
 	}
 
-	// Buat transaksi keluar kategori "Tagihan"
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO transactions (id, date, type, category, party, source, note, amount, created_at)
-		VALUES ($1, $2, 'keluar', 'Tagihan', $3, '', $4, $5, $6)
-	`, txID, todayStr, title, note, amount, now)
+		INSERT INTO transactions (id, user_id, date, type, category, party, source, note, amount, created_at)
+		VALUES ($1, $2, $3, 'keluar', 'Tagihan', $4, '', $5, $6, $7)
+	`, txID, userID, todayStr, title, note, amount, now)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mencatat transaksi pembayaran tagihan: "+err.Error())
 	}

@@ -7,18 +7,19 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"kasku-backend/internal/middleware"
 )
 
 // GetIncomeSources menangani GET /api/income-sources?from=&to=
 func (h *Handler) GetIncomeSources(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	from := c.Query("from")
 	to := c.Query("to")
 
-	var conditions []string
-	var args []any
-	argIndex := 1
-
-	conditions = append(conditions, "type = 'masuk'")
+	conditions := []string{"user_id = $1", "type = 'masuk'"}
+	args := []any{userID}
+	argIndex := 2
 
 	if from != "" {
 		if _, err := ParseDate(from); err != nil {
@@ -40,7 +41,6 @@ func (h *Handler) GetIncomeSources(c *fiber.Ctx) error {
 
 	whereClause := "WHERE " + strings.Join(conditions, " AND ")
 
-	// Hitung grand total untuk kalkulasi persentase
 	totalQuery := fmt.Sprintf("SELECT COALESCE(SUM(amount), 0) FROM transactions %s", whereClause)
 	var grandTotal int64
 	err := h.DB.QueryRow(totalQuery, args...).Scan(&grandTotal)
@@ -93,13 +93,14 @@ func (h *Handler) GetIncomeSources(c *fiber.Ctx) error {
 
 // GetItems menangani GET /api/items?q=&from=&to=
 func (h *Handler) GetItems(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	q := c.Query("q")
 	from := c.Query("from")
 	to := c.Query("to")
 
-	var conditions []string
-	var args []any
-	argIndex := 1
+	conditions := []string{"t.user_id = $1"}
+	args := []any{userID}
+	argIndex := 2
 
 	if from != "" {
 		if _, err := ParseDate(from); err != nil {
@@ -125,10 +126,7 @@ func (h *Handler) GetItems(c *fiber.Ctx) error {
 		argIndex++
 	}
 
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	whereClause := "WHERE " + strings.Join(conditions, " AND ")
 
 	query := fmt.Sprintf(`
 		WITH ranked_items AS (
@@ -170,11 +168,11 @@ func (h *Handler) GetItems(c *fiber.Ctx) error {
 	defer rows.Close()
 
 	type ItemStats struct {
-		Nama          string  `json:"nama"`
-		TotalQty      float64 `json:"total_qty"`
-		TotalUang     int64   `json:"total_uang"`
+		Nama           string  `json:"nama"`
+		TotalQty       float64 `json:"total_qty"`
+		TotalUang      int64   `json:"total_uang"`
 		TerakhirDibeli string  `json:"terakhir_dibeli"`
-		HargaTerakhir int64   `json:"harga_terakhir"`
+		HargaTerakhir  int64   `json:"harga_terakhir"`
 	}
 
 	results := make([]ItemStats, 0)

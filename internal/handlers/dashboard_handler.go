@@ -7,45 +7,46 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"kasku-backend/internal/calc"
+	"kasku-backend/internal/middleware"
 )
 
 // GetToday menangani GET /api/today
 func (h *Handler) GetToday(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	todayStr := time.Now().Format("2006-01-02")
-	// Parameter opsional date untuk testing atau manipulasi waktu
 	if customDate := c.Query("date"); customDate != "" {
 		if _, err := ParseDate(customDate); err == nil {
 			todayStr = customDate
 		}
 	}
 
-	openingBalance, err := h.GetOpeningBalance()
+	openingBalance, err := h.GetOpeningBalance(userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil saldo awal")
 	}
 
-	// 1. Hitung saldo akhir kemarin (saldo_awal_hari)
+	// 1. Saldo akhir kemarin (user_id terisolasi)
 	var masukKemarin, keluarKemarin int64
 	err = h.DB.QueryRow(`
 		SELECT 
 			COALESCE(SUM(CASE WHEN type = 'masuk' THEN amount ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'keluar' THEN amount ELSE 0 END), 0)
 		FROM transactions
-		WHERE date < $1
-	`, todayStr).Scan(&masukKemarin, &keluarKemarin)
+		WHERE user_id = $1 AND date < $2
+	`, userID, todayStr).Scan(&masukKemarin, &keluarKemarin)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghitung saldo kemarin")
 	}
 	saldoAwalHari := openingBalance + masukKemarin - keluarKemarin
 
-	// 2. Ambil transaksi hari ini
+	// 2. Transaksi hari ini
 	rows, err := h.DB.Query(`
 		SELECT id, date, type, category, party, source, note, amount, created_at,
 		       COALESCE((SELECT COUNT(*) FROM transaction_items ti WHERE ti.transaction_id = transactions.id), 0) as jumlah_item
 		FROM transactions
-		WHERE date = $1
+		WHERE user_id = $1 AND date = $2
 		ORDER BY created_at ASC, id ASC
-	`, todayStr)
+	`, userID, todayStr)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil transaksi hari ini")
 	}
@@ -106,26 +107,29 @@ func (h *Handler) GetToday(c *fiber.Ctx) error {
 
 // GetOverview menangani GET /api/overview
 func (h *Handler) GetOverview(c *fiber.Ctx) error {
-	openingBalance, err := h.GetOpeningBalance()
+	userID := middleware.GetUserID(c)
+
+	openingBalance, err := h.GetOpeningBalance(userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil saldo awal")
 	}
 
-	// 1. Hitung saldo total
+	// 1. Saldo kas total
 	var totalMasuk, totalKeluar int64
 	err = h.DB.QueryRow(`
 		SELECT 
 			COALESCE(SUM(CASE WHEN type = 'masuk' THEN amount ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'keluar' THEN amount ELSE 0 END), 0)
 		FROM transactions
-	`).Scan(&totalMasuk, &totalKeluar)
+		WHERE user_id = $1
+	`, userID).Scan(&totalMasuk, &totalKeluar)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghitung saldo kas")
 	}
 	saldo := openingBalance + totalMasuk - totalKeluar
 
-	// 2. Ambil semua transaksi untuk perhitungan piutang dan hutang saya
-	txRows, err := h.DB.Query(`SELECT date, type, category, party, source, amount FROM transactions`)
+	// 2. Piutang dan Hutang Saya
+	txRows, err := h.DB.Query(`SELECT date, type, category, party, source, amount FROM transactions WHERE user_id = $1`, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membaca transaksi")
 	}
@@ -134,10 +138,9 @@ func (h *Handler) GetOverview(c *fiber.Ctx) error {
 	var allTxs []calc.TransactionMinimal
 	for txRows.Next() {
 		var tx calc.TransactionMinimal
-		if err := txRows.Scan(&tx.Date, &tx.Type, &tx.Category, &tx.Party, &tx.Source, &tx.Amount); err != nil {
-			return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membaca data transaksi")
+		if err := txRows.Scan(&tx.Date, &tx.Type, &tx.Category, &tx.Party, &tx.Source, &tx.Amount); err == nil {
+			allTxs = append(allTxs, tx)
 		}
-		allTxs = append(allTxs, tx)
 	}
 
 	piutangList := calc.CalculatePiutang(allTxs)
@@ -156,12 +159,12 @@ func (h *Handler) GetOverview(c *fiber.Ctx) error {
 		}
 	}
 
-	// 3. Ambil langganan belum dibayar
+	// 3. Langganan belum dibayar
 	subRows, err := h.DB.Query(`
 		SELECT id, name, amount, cycle, first_due, active 
 		FROM subscriptions 
-		WHERE active = true
-	`)
+		WHERE user_id = $1 AND active = true
+	`, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membaca langganan")
 	}
@@ -180,16 +183,12 @@ func (h *Handler) GetOverview(c *fiber.Ctx) error {
 			continue
 		}
 
-		// Hitung n: jumlah transaksi kategori "Langganan" dengan party = name
 		var paidCount int
-		err = h.DB.QueryRow(`
+		_ = h.DB.QueryRow(`
 			SELECT COUNT(*) 
 			FROM transactions 
-			WHERE type = 'keluar' AND category = 'Langganan' AND LOWER(TRIM(party)) = LOWER(TRIM($1))
-		`, name).Scan(&paidCount)
-		if err != nil {
-			continue
-		}
+			WHERE user_id = $1 AND type = 'keluar' AND category = 'Langganan' AND LOWER(TRIM(party)) = LOWER(TRIM($2))
+		`, userID, name).Scan(&paidCount)
 
 		status := calc.CalculateSubscriptionStatus(firstDue, cycle, paidCount, today)
 		if status.Status == "Belum Dibayar" {
@@ -198,14 +197,14 @@ func (h *Handler) GetOverview(c *fiber.Ctx) error {
 		}
 	}
 
-	// 4. Ambil tagihan belum dibayar
+	// 4. Tagihan belum dibayar
 	var tagihanBelumDibayarTotal int64
 	var countUnpaidBills int
 	err = h.DB.QueryRow(`
 		SELECT COALESCE(SUM(amount), 0), COUNT(*) 
 		FROM bills 
-		WHERE paid = false
-	`).Scan(&tagihanBelumDibayarTotal, &countUnpaidBills)
+		WHERE user_id = $1 AND paid = false
+	`, userID).Scan(&tagihanBelumDibayarTotal, &countUnpaidBills)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membaca tagihan")
 	}
@@ -228,6 +227,7 @@ func (h *Handler) GetOverview(c *fiber.Ctx) error {
 
 // GetSummary menangani GET /api/summary?from=&to=
 func (h *Handler) GetSummary(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
 	now := time.Now()
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	lastOfMonth := firstOfMonth.AddDate(0, 1, -1)
@@ -258,34 +258,34 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 		toStr = toDate.Format("2006-01-02")
 	}
 
-	openingBalance, err := h.GetOpeningBalance()
+	openingBalance, err := h.GetOpeningBalance(userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil saldo awal")
 	}
 
-	// 1. Saldo awal periode (transaksi sebelum fromStr)
+	// 1. Saldo awal periode
 	var masukSebelum, keluarSebelum int64
 	err = h.DB.QueryRow(`
 		SELECT 
 			COALESCE(SUM(CASE WHEN type = 'masuk' THEN amount ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'keluar' THEN amount ELSE 0 END), 0)
 		FROM transactions
-		WHERE date < $1
-	`, fromStr).Scan(&masukSebelum, &keluarSebelum)
+		WHERE user_id = $1 AND date < $2
+	`, userID, fromStr).Scan(&masukSebelum, &keluarSebelum)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghitung saldo awal periode")
 	}
 	saldoAwalPeriode := openingBalance + masukSebelum - keluarSebelum
 
-	// 2. Transaksi dalam periode
+	// 2. Transaksi periode
 	var totalMasuk, totalKeluar int64
 	err = h.DB.QueryRow(`
 		SELECT 
 			COALESCE(SUM(CASE WHEN type = 'masuk' THEN amount ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'keluar' THEN amount ELSE 0 END), 0)
 		FROM transactions
-		WHERE date >= $1 AND date <= $2
-	`, fromStr, toStr).Scan(&totalMasuk, &totalKeluar)
+		WHERE user_id = $1 AND date >= $2 AND date <= $3
+	`, userID, fromStr, toStr).Scan(&totalMasuk, &totalKeluar)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghitung ringkasan periode")
 	}
@@ -301,10 +301,10 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 	catRows, err := h.DB.Query(`
 		SELECT category, SUM(amount) AS total
 		FROM transactions
-		WHERE type = 'keluar' AND date >= $1 AND date <= $2
+		WHERE user_id = $1 AND type = 'keluar' AND date >= $2 AND date <= $3
 		GROUP BY category
 		ORDER BY total DESC
-	`, fromStr, toStr)
+	`, userID, fromStr, toStr)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghitung pengeluaran per kategori")
 	}
@@ -329,10 +329,10 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 			SUM(amount) AS total,
 			COUNT(*) AS cnt
 		FROM transactions
-		WHERE type = 'masuk' AND date >= $1 AND date <= $2
+		WHERE user_id = $1 AND type = 'masuk' AND date >= $2 AND date <= $3
 		GROUP BY src
 		ORDER BY total DESC
-	`, fromStr, toStr)
+	`, userID, fromStr, toStr)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghitung pemasukan per sumber")
 	}
@@ -356,7 +356,7 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 		pemasukanPerSumber = append(pemasukanPerSumber, is)
 	}
 
-	// 5. Barang teratas (10 barang dengan total belanja terbesar)
+	// 5. Barang teratas
 	type TopItem struct {
 		Nama      string  `json:"nama"`
 		TotalQty  float64 `json:"total_qty"`
@@ -366,11 +366,11 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 		SELECT ti.name, SUM(ti.qty) AS total_qty, SUM(ti.subtotal) AS total_uang
 		FROM transaction_items ti
 		JOIN transactions t ON ti.transaction_id = t.id
-		WHERE t.type = 'keluar' AND t.date >= $1 AND t.date <= $2
+		WHERE t.user_id = $1 AND t.type = 'keluar' AND t.date >= $2 AND t.date <= $3
 		GROUP BY ti.name
 		ORDER BY total_uang DESC
 		LIMIT 10
-	`, fromStr, toStr)
+	`, userID, fromStr, toStr)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghitung barang teratas")
 	}
@@ -384,17 +384,17 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 		}
 	}
 
-	// 6. Tren harian: [{tanggal, masuk, keluar, saldo}]
+	// 6. Tren harian
 	trendRows, err := h.DB.Query(`
 		SELECT 
 			date,
 			COALESCE(SUM(CASE WHEN type = 'masuk' THEN amount ELSE 0 END), 0) AS masuk,
 			COALESCE(SUM(CASE WHEN type = 'keluar' THEN amount ELSE 0 END), 0) AS keluar
 		FROM transactions
-		WHERE date >= $1 AND date <= $2
+		WHERE user_id = $1 AND date >= $2 AND date <= $3
 		GROUP BY date
 		ORDER BY date ASC
-	`, fromStr, toStr)
+	`, userID, fromStr, toStr)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghitung tren harian")
 	}
@@ -419,7 +419,7 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 		}
 	}
 
-	// 7. Perbandingan dengan periode sebelumnya
+	// 7. Perbandingan
 	daysDiff := int(toDate.Sub(fromDate).Hours()/24) + 1
 	if daysDiff <= 0 {
 		daysDiff = 1
@@ -432,8 +432,8 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 	_ = h.DB.QueryRow(`
 		SELECT COALESCE(SUM(amount), 0)
 		FROM transactions
-		WHERE type = 'keluar' AND date >= $1 AND date <= $2
-	`, prevFromDate.Format("2006-01-02"), prevToDate.Format("2006-01-02")).Scan(&keluarPeriodeSebelumnya)
+		WHERE user_id = $1 AND type = 'keluar' AND date >= $2 AND date <= $3
+	`, userID, prevFromDate.Format("2006-01-02"), prevToDate.Format("2006-01-02")).Scan(&keluarPeriodeSebelumnya)
 
 	selisihRp := totalKeluar - keluarPeriodeSebelumnya
 	var selisihPersen float64
@@ -441,7 +441,6 @@ func (h *Handler) GetSummary(c *fiber.Ctx) error {
 		selisihPersen = math.Round((float64(selisihRp)/float64(keluarPeriodeSebelumnya))*10000) / 100.0
 	}
 
-	// 8. Rata-rata keluar per hari
 	rataRataKeluarPerHari := int64(math.Round(float64(totalKeluar) / float64(daysDiff)))
 
 	return c.JSON(fiber.Map{

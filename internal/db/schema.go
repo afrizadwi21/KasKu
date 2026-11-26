@@ -3,17 +3,43 @@ package db
 const SchemaInitSQL = `
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
+-- 1. Tabel users
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-INSERT INTO settings (key, value)
-VALUES ('opening_balance', '0')
-ON CONFLICT (key) DO NOTHING;
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (lower(email));
 
+-- 2. Tabel refresh_tokens
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    user_agent TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens (user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens (token_hash);
+
+-- 3. Tabel settings (per pengguna)
+CREATE TABLE IF NOT EXISTS settings (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    PRIMARY KEY (user_id, key)
+);
+
+-- 4. Tabel transactions
 CREATE TABLE IF NOT EXISTS transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     date DATE NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('masuk', 'keluar')),
     category TEXT NOT NULL,
@@ -24,10 +50,11 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (date DESC);
-CREATE INDEX IF NOT EXISTS idx_transactions_category_party ON transactions (category, lower(party));
-CREATE INDEX IF NOT EXISTS idx_transactions_source ON transactions (lower(source));
+CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions (user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_category_party ON transactions (user_id, category, lower(party));
+CREATE INDEX IF NOT EXISTS idx_transactions_user_source ON transactions (user_id, lower(source));
 
+-- 5. Tabel transaction_items
 CREATE TABLE IF NOT EXISTS transaction_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     transaction_id UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
@@ -40,8 +67,10 @@ CREATE TABLE IF NOT EXISTS transaction_items (
 CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON transaction_items (transaction_id);
 CREATE INDEX IF NOT EXISTS idx_transaction_items_name ON transaction_items (lower(name));
 
+-- 6. Tabel subscriptions
 CREATE TABLE IF NOT EXISTS subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     amount BIGINT NOT NULL CHECK (amount > 0),
     cycle TEXT NOT NULL CHECK (cycle IN ('mingguan', 'bulanan', '3_bulanan', 'tahunan')),
@@ -50,10 +79,12 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_subscriptions_name ON subscriptions (lower(name));
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_name ON subscriptions (user_id, lower(name));
 
+-- 7. Tabel bills
 CREATE TABLE IF NOT EXISTS bills (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     amount BIGINT NOT NULL CHECK (amount > 0),
     due_date DATE NOT NULL,
@@ -63,6 +94,6 @@ CREATE TABLE IF NOT EXISTS bills (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_bills_due_date ON bills (due_date ASC);
-CREATE INDEX IF NOT EXISTS idx_bills_paid ON bills (paid);
+CREATE INDEX IF NOT EXISTS idx_bills_user_due_date ON bills (user_id, due_date ASC);
+CREATE INDEX IF NOT EXISTS idx_bills_user_paid ON bills (user_id, paid);
 `
