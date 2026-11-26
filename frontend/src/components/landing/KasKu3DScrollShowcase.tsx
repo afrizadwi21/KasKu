@@ -8,26 +8,26 @@ import { ArrowDown, ArrowRight } from "lucide-react";
 const STAGES = [
   {
     id: 0,
-    title: "Kartu & Arus Kas Real-Time",
+    title: "Catat Masuk & Keluar Harian",
     description:
-      "Setiap transaksi masuk dan keluar langsung memperbarui saldo berjalan. Tidak ada lagi selisih catatan antara dompet, rekening, dan rincian belanja.",
-    metricLabel: "Saldo Total Terpantau",
+      "Setiap pemasukan dan belanja langsung memperbarui saldo Anda. Rincian barang yang dibeli ikut tercatat rapi sehingga Anda tahu ke mana uang pergi.",
+    metricLabel: "Total Uang Saat Ini",
     metricValue: "Rp 65.353",
   },
   {
     id: 1,
-    title: "Pos Tabungan Terisolasi",
+    title: "Pisahkan Pos Tabungan",
     description:
-      "Sisihkan dana ke pos tujuan seperti Dana Darurat atau Target Barang. Uang tersimpan aman di pilar tabungan dan otomatis mengurangi saldo jajan Anda.",
-    metricLabel: "Total Tersimpan Aman",
+      "Sisihkan uang untuk Dana Darurat atau barang impian. Uang di tabungan tetap milik Anda, tetapi saldo jajan otomatis berkurang supaya tidak ikut terpakai.",
+    metricLabel: "Uang Disisihkan",
     metricValue: "Rp 20.000",
   },
   {
     id: 2,
-    title: "Analitik & Simulasi Wishlist",
+    title: "Hitung Sisa Sebelum Belanja",
     description:
-      "Lihat perbandingan pemasukan, pengeluaran, dan jatah harian dalam satu proyeksi. Simulasikan harga barang sebelum membeli agar tagihan tetap aman.",
-    metricLabel: "Saldo Bebas / Jatah Harian",
+      "Cek dulu apakah saldo jajan cukup untuk membeli barang wishlist dan membayar tagihan minggu ini. Jatah belanja harian ikut dihitung otomatis.",
+    metricLabel: "Uang Boleh Dipakai",
     metricValue: "Rp 45.353",
   },
 ];
@@ -420,7 +420,7 @@ export function KasKu3DScrollShowcase() {
             </div>
 
             <a
-              href="#arsitektur"
+              href="#fitur"
               className="inline-flex items-center gap-1 text-xs text-[#bbbcbc] hover:text-white transition-colors"
             >
               <span>Lewati</span>
@@ -471,7 +471,7 @@ export function KasKu3DScrollShowcase() {
         {/* Bottom Scroll Guidance */}
         <div className="max-w-7xl w-full mx-auto px-5 sm:px-8 flex items-center justify-between text-xs text-white/50 z-10">
           <span>Scroll turun atau naik untuk menggerakkan animasi 3D</span>
-          <span className="font-mono">WebGL Interactive</span>
+          <span className="font-mono">Tampilan 3D</span>
         </div>
       </div>
     </section>
