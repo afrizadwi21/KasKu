@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowRight } from "lucide-react";
+import { Text3D } from "./Text3D";
 
 const STAGES = [
   {
@@ -167,9 +168,9 @@ export function KasKu3DScrollShowcase() {
         {/* Center 3D Product Render Stage + Narrative */}
         <div className="max-w-7xl w-full mx-auto px-5 sm:px-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-5 space-y-5 z-10">
-            <h2 className="font-display text-4xl sm:text-5xl text-[#f8f4ee]">
+            <Text3D as="h2" variant="light" className="text-4xl sm:text-5xl text-[#f8f4ee]">
               {currentStage.title}
-            </h2>
+            </Text3D>
             <p className="text-sm sm:text-base text-[#ffc9a3]/85 leading-relaxed">
               {currentStage.description}
             </p>

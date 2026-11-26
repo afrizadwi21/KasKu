@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Scroll3DFrame } from "./Scroll3DFrame";
+import { Text3D } from "./Text3D";
 
 const FEATURE_MODULES = [
   {
@@ -117,9 +118,9 @@ export function LandingFeatures() {
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           <div className="lg:col-span-6 space-y-6">
-            <h2 className="font-display text-4xl sm:text-5xl text-balance text-[#1a0e08]">
+            <Text3D as="h2" variant="dark" className="text-4xl sm:text-5xl text-balance text-[#1a0e08]">
               Saldo besar di rekening sering menipu kalau belum dipisah.
-            </h2>
+            </Text3D>
             <p className="text-base sm:text-lg text-[#1a0e08]/75 leading-relaxed">
               Saat uang tabungan, uang belanja harian, dan tagihan akhir bulan bercampur di satu angka, rasanya selalu aman sampai tiba-tiba kurang. KasKu memisahkan ketiganya sejak awal Anda mencatat.
             </p>
@@ -186,9 +187,9 @@ export function LandingFeatures() {
       >
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
           <div className="max-w-2xl mb-12 space-y-4">
-            <h2 className="font-display text-4xl sm:text-5xl text-[#1a0e08]">
+            <Text3D as="h2" variant="dark" className="text-4xl sm:text-5xl text-[#1a0e08]">
               Semua keperluan kas pribadi ada di satu tempat.
-            </h2>
+            </Text3D>
             <p className="text-base sm:text-lg text-[#1a0e08]/75 leading-relaxed">
               Pilih bagian di bawah untuk melihat bagaimana KasKu membantu mengatur uang sehari-hari.
             </p>
@@ -224,9 +225,9 @@ export function LandingFeatures() {
           {/* Active Feature Content */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             <div className="lg:col-span-6 space-y-6">
-              <h3 className="font-display text-2xl sm:text-3xl text-[#1a0e08]">
+              <Text3D as="h3" variant="dark" className="text-2xl sm:text-4xl text-[#1a0e08]">
                 {activeModule.title}
-              </h3>
+              </Text3D>
               <p className="text-base text-[#1a0e08]/75 leading-relaxed">
                 {activeModule.summary}
               </p>
@@ -269,9 +270,9 @@ export function LandingFeatures() {
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-5 space-y-5">
-            <h2 className="font-display text-3xl sm:text-5xl text-[#1a0e08]">
+            <Text3D as="h2" variant="dark" className="text-3xl sm:text-5xl text-[#1a0e08]">
               Lihat sisa saldo Anda sebelum menekan tombol beli.
-            </h2>
+            </Text3D>
             <p className="text-base text-[#1a0e08]/75 leading-relaxed">
               Simulasi ini memakai cara hitung yang sama dengan di dalam aplikasi KasKu. Coba pilih barang dan sumber dananya untuk melihat perubahan saldo Anda.
             </p>

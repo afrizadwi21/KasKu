@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { ArrowUpRight, ShieldCheck, Lock, FileSpreadsheet, RotateCcw } from "lucide-react";
 import { Scroll3DFrame } from "./Scroll3DFrame";
+import { Text3D } from "./Text3D";
 
 const PRIVACY_POINTS = [
   {
@@ -36,9 +37,9 @@ export function LandingFooter() {
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-5 space-y-5">
-            <h2 className="font-display text-4xl sm:text-5xl text-[#f8f4ee]">
+            <Text3D as="h2" variant="light" className="text-4xl sm:text-5xl text-[#f8f4ee]">
               Data keuangan Anda hanya untuk Anda.
-            </h2>
+            </Text3D>
             <p className="text-base text-[#ffc9a3]/85 leading-relaxed">
               KasKu dibuat sebagai alat bantu catat pribadi yang tenang. Semua angka dihitung apa adanya supaya Anda selalu tahu kondisi uang Anda sebelum mengambil keputusan.
             </p>

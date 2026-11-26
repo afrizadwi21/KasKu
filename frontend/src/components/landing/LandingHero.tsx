@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Play } from "lucide-react";
+import { Text3D } from "./Text3D";
 
 const TELEMETRY_ITEMS = [
   { label: "Catatan Harian", value: "Uang Masuk & Keluar" },
@@ -59,9 +60,9 @@ export function LandingHero() {
         }}
       >
         <div className="max-w-3xl space-y-6 animate-reveal-up">
-          <h1 className="font-display text-5xl sm:text-7xl lg:text-[5.25rem] text-balance text-[#f8f4ee]">
+          <Text3D as="h1" variant="light" className="text-5xl sm:text-7xl lg:text-[5.25rem] text-balance text-[#f8f4ee]">
             Tahu persis uang yang boleh dipakai hari ini.
-          </h1>
+          </Text3D>
           <p className="text-base sm:text-xl text-[#ffc9a3]/90 max-w-2xl leading-relaxed font-normal">
             KasKu memisahkan uang jajan dari tabungan Anda, mencatat siapa yang masih berhutang, mengingatkan tagihan rutin, dan menghitung sisa saldo sebelum Anda belanja.
           </p>
