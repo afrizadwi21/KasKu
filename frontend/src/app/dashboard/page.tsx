@@ -199,7 +199,12 @@ export default function DashboardPage() {
       ]);
 
       setUser(meData);
-      setProfileName(meData?.name || "");
+      if (meData) {
+        localStorage.setItem("kasku_user", JSON.stringify(meData));
+      }
+      if (!silent) {
+        setProfileName(meData?.name || "");
+      }
       setOverview(overviewRes || EMPTY_OVERVIEW);
       setTodayData(todayRes || EMPTY_TODAY);
       setTransactions(Array.isArray(txRes) ? txRes : []);
