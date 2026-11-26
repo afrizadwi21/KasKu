@@ -41,51 +41,93 @@ const STAGES = [
 export function KasKu3DScrollShowcase() {
   const sectionRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const [progress, setProgress] = useState<number>(0);
-  const [pointer, setPointer] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const inner3DRef = useRef<HTMLDivElement | null>(null);
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const pointerRef = useRef({ x: 0, y: 0, active: false });
 
-  // Track native scroll progress smoothly on both scroll down & scroll up
+  const [activeStage, setActiveStage] = useState<number>(0);
+  const [progressPct, setProgressPct] = useState<number>(0);
+
   useEffect(() => {
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    let currentP = 0;
+    let currentPx = 0;
+    let currentPy = 0;
+    let lastStage = 0;
+    let lastPct = -1;
     let rafId = 0;
 
-    const updateProgress = () => {
+    const tick = () => {
       const el = sectionRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const totalScrollable = el.offsetHeight - window.innerHeight;
-      if (totalScrollable <= 0) return;
+      const inner = inner3DRef.current;
+      if (el && inner) {
+        const rect = el.getBoundingClientRect();
+        const totalScrollable = el.offsetHeight - window.innerHeight;
+        const targetP =
+          totalScrollable > 0
+            ? Math.max(0, Math.min(1, -rect.top / totalScrollable))
+            : 0;
 
-      const raw = -rect.top / totalScrollable;
-      const clamped = Math.max(0, Math.min(1, raw));
-      setProgress(clamped);
+        // Slow, realistic damped inertia (0.045)
+        currentP += (targetP - currentP) * 0.045;
+
+        const targetPx = pointerRef.current.active ? pointerRef.current.x : 0;
+        const targetPy = pointerRef.current.active ? pointerRef.current.y : 0;
+        currentPx += (targetPx - currentPx) * 0.06;
+        currentPy += (targetPy - currentPy) * 0.06;
+
+        const stage = currentP < 0.34 ? 0 : currentP < 0.68 ? 1 : 2;
+        if (stage !== lastStage) {
+          lastStage = stage;
+          setActiveStage(stage);
+        }
+
+        const pct = Math.round(currentP * 100);
+        if (pct !== lastPct) {
+          lastPct = pct;
+          setProgressPct(pct);
+          if (barRef.current) {
+            barRef.current.style.width = `${pct}%`;
+          }
+        }
+
+        const localPhase =
+          stage === 0
+            ? currentP / 0.34
+            : stage === 1
+            ? (currentP - 0.34) / 0.34
+            : (currentP - 0.68) / 0.32;
+
+        const rotY = (localPhase - 0.5) * 24 + currentPx * 18;
+        const rotX = (0.5 - localPhase) * 14 - currentPy * 14;
+        const scale = 0.95 + Math.sin(localPhase * Math.PI) * 0.09;
+
+        inner.style.transform = `rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(4)})`;
+      }
+      rafId = requestAnimationFrame(tick);
     };
 
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(updateProgress);
-    };
-
-    updateProgress();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = stageRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const nx = (e.clientX - rect.left) / rect.width - 0.5;
-    const ny = (e.clientY - rect.top) / rect.height - 0.5;
-    setPointer({ x: nx, y: ny });
+    pointerRef.current = {
+      x: (e.clientX - rect.left) / rect.width - 0.5,
+      y: (e.clientY - rect.top) / rect.height - 0.5,
+      active: true,
+    };
   };
 
   const handlePointerLeave = () => {
-    setPointer({ x: 0, y: 0 });
+    pointerRef.current = { x: 0, y: 0, active: false };
   };
 
   const scrollToStage = (idx: number) => {
@@ -100,27 +142,13 @@ export function KasKu3DScrollShowcase() {
     });
   };
 
-  const activeStage = progress < 0.34 ? 0 : progress < 0.68 ? 1 : 2;
-  const progressPct = Math.round(progress * 100);
   const currentStage = STAGES[activeStage];
-
-  // Continuous 3D spatial transform driven by scroll up/down + pointer tilt
-  const localPhase =
-    activeStage === 0
-      ? progress / 0.34
-      : activeStage === 1
-      ? (progress - 0.34) / 0.34
-      : (progress - 0.68) / 0.32;
-
-  const scrollRotateY = (localPhase - 0.5) * 18 + pointer.x * 16;
-  const scrollRotateX = (0.5 - localPhase) * 10 - pointer.y * 12;
-  const scrollScale = 0.96 + Math.sin(localPhase * Math.PI) * 0.08;
 
   return (
     <section
       ref={sectionRef}
       id="showcase-3d"
-      className="relative h-[280vh] bg-[#140a05] text-[#f8f4ee] border-y border-[#f8f4ee]/15"
+      className="relative h-[300vh] bg-[#140a05] text-[#f8f4ee] border-y border-[#f8f4ee]/15"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between pt-20 sm:pt-24 pb-6">
         {/* Top Stage Navigation & Scroll Progress */}
@@ -146,8 +174,9 @@ export function KasKu3DScrollShowcase() {
             <div className="hidden sm:flex items-center gap-2">
               <div className="w-28 h-1 bg-[#f8f4ee]/15 overflow-hidden rounded-full">
                 <div
-                  className="h-full bg-[#ff5b14] transition-all duration-150"
-                  style={{ width: `${progressPct}%` }}
+                  ref={barRef}
+                  className="h-full bg-[#ff5b14]"
+                  style={{ width: "0%" }}
                 />
               </div>
               <span className="font-mono text-xs text-[#ffc9a3]/80 num-tabular w-9 text-right">
@@ -203,18 +232,16 @@ export function KasKu3DScrollShowcase() {
             className="lg:col-span-7 h-[300px] sm:h-[420px] lg:h-[500px] relative flex items-center justify-center [perspective:1400px]"
           >
             <div
-              className="relative w-full h-full max-w-2xl transition-transform duration-150 ease-out will-change-transform"
-              style={{
-                transform: `rotateX(${scrollRotateX}deg) rotateY(${scrollRotateY}deg) scale(${scrollScale})`,
-                transformStyle: "preserve-3d",
-              }}
+              ref={inner3DRef}
+              className="relative w-full h-full max-w-2xl will-change-transform"
+              style={{ transformStyle: "preserve-3d" }}
             >
               {STAGES.map((stage) => {
                 const isActive = activeStage === stage.id;
                 return (
                   <div
                     key={stage.id}
-                    className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-out ${
+                    className={`absolute inset-0 flex items-center justify-center transition-all duration-700 ease-out ${
                       isActive
                         ? "opacity-100 scale-100"
                         : "opacity-0 scale-95 pointer-events-none"

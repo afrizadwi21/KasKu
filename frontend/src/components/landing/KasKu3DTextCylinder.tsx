@@ -15,7 +15,13 @@ const CYLINDER_ITEMS = [
 
 export function KasKu3DTextCylinder() {
   const sectionRef = useRef<HTMLDivElement | null>(null);
-  const [progress, setProgress] = useState(0);
+  const drumRef = useRef<HTMLOListElement | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [progressPct, setProgressPct] = useState(0);
+
+  const totalItems = CYLINDER_ITEMS.length;
+  const stepAngle = 22;
+  const radius = 260;
 
   useEffect(() => {
     const prefersReducedMotion =
@@ -23,44 +29,52 @@ export function KasKu3DTextCylinder() {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) return;
 
+    let currentP = 0;
+    let lastIdx = -1;
+    let lastPct = -1;
     let rafId = 0;
 
-    const update = () => {
+    const tick = () => {
       const el = sectionRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const totalScrollable = el.offsetHeight - window.innerHeight;
-      if (totalScrollable <= 0) return;
-      const raw = -rect.top / totalScrollable;
-      setProgress(Math.max(0, Math.min(1, raw)));
+      const drum = drumRef.current;
+      if (el && drum) {
+        const rect = el.getBoundingClientRect();
+        const totalScrollable = el.offsetHeight - window.innerHeight;
+        const targetP =
+          totalScrollable > 0
+            ? Math.max(0, Math.min(1, -rect.top / totalScrollable))
+            : 0;
+
+        // Slow, realistic physical inertia on scroll up & down
+        currentP += (targetP - currentP) * 0.05;
+
+        const currentRotation = currentP * (totalItems - 1) * stepAngle;
+        drum.style.transform = `rotateX(${currentRotation.toFixed(2)}deg)`;
+
+        const idx = Math.round(currentP * (totalItems - 1));
+        if (idx !== lastIdx) {
+          lastIdx = idx;
+          setActiveIndex(idx);
+        }
+
+        const pct = Math.round(currentP * 100);
+        if (pct !== lastPct) {
+          lastPct = pct;
+          setProgressPct(pct);
+        }
+      }
+      rafId = requestAnimationFrame(tick);
     };
 
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, []);
-
-  const totalItems = CYLINDER_ITEMS.length;
-  const stepAngle = 22; // degrees per item on the 3D drum
-  const radius = 260; // cylinder depth radius in px
-  const currentRotation = progress * (totalItems - 1) * stepAngle;
-  const activeIndex = Math.round(progress * (totalItems - 1));
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [totalItems, stepAngle]);
 
   return (
     <section
       ref={sectionRef}
       aria-label="Roda Fitur 3D KasKu"
-      className="relative h-[240vh] bg-[#140a05] text-[#f8f4ee] border-b border-[#f8f4ee]/15"
+      className="relative h-[260vh] bg-[#140a05] text-[#f8f4ee] border-b border-[#f8f4ee]/15"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between py-20 sm:py-24 px-5 sm:px-8">
         <div className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4 z-10">
@@ -83,24 +97,20 @@ export function KasKu3DTextCylinder() {
           style={{ perspective: "1400px" }}
         >
           <ol
-            className="relative w-full h-24 m-0 p-0 list-none flex items-center justify-center"
-            style={{
-              transformStyle: "preserve-3d",
-              transform: `rotateX(${currentRotation}deg)`,
-              transition: "transform 80ms cubic-bezier(0.16, 1, 0.3, 1)",
-              willChange: "transform",
-            }}
+            ref={drumRef}
+            className="relative w-full h-24 m-0 p-0 list-none flex items-center justify-center will-change-transform"
+            style={{ transformStyle: "preserve-3d" }}
           >
             {CYLINDER_ITEMS.map((item, idx) => {
               const itemAngle = -idx * stepAngle;
-              const deltaAngle = Math.abs(currentRotation + itemAngle);
-              const isFocused = deltaAngle < stepAngle * 0.55;
-              const opacity = Math.max(0.08, 1 - deltaAngle / 68);
+              const dist = Math.abs(activeIndex - idx);
+              const isFocused = dist === 0;
+              const opacity = Math.max(0.1, 1 - dist * 0.28);
 
               return (
                 <li
                   key={item.label}
-                  className="absolute inset-x-0 flex items-center justify-between gap-4 px-4 sm:px-8 py-3"
+                  className="absolute inset-x-0 flex items-center justify-between gap-4 px-4 sm:px-8 py-3 transition-opacity duration-300"
                   style={{
                     transform: `rotateX(${itemAngle}deg) translateZ(${radius}px)`,
                     backfaceVisibility: "hidden",
@@ -108,14 +118,14 @@ export function KasKu3DTextCylinder() {
                   }}
                 >
                   <span
-                    className={`font-display text-2xl sm:text-5xl lg:text-6xl tracking-tight transition-colors duration-150 ${
+                    className={`font-display text-2xl sm:text-5xl lg:text-6xl tracking-tight transition-colors duration-300 ${
                       isFocused ? "text-[#ff5b14]" : "text-[#f8f4ee]"
                     }`}
                   >
                     {item.label}
                   </span>
                   <span
-                    className={`hidden sm:inline-block font-mono text-xs uppercase tracking-widest px-3 py-1 rounded-sm border ${
+                    className={`hidden sm:inline-block font-mono text-xs uppercase tracking-widest px-3 py-1 rounded-sm border transition-colors duration-300 ${
                       isFocused
                         ? "border-[#ff5b14] text-[#ff7a2e] bg-[#ff5b14]/10"
                         : "border-[#f8f4ee]/20 text-[#ffc9a3]/70"
@@ -131,7 +141,7 @@ export function KasKu3DTextCylinder() {
 
         <div className="max-w-7xl w-full mx-auto flex items-center justify-between text-xs text-[#f8f4ee]/50">
           <span>Terus gulir untuk melanjutkan</span>
-          <span className="font-mono num-tabular">{Math.round(progress * 100)}%</span>
+          <span className="font-mono num-tabular">{progressPct}%</span>
         </div>
       </div>
     </section>
