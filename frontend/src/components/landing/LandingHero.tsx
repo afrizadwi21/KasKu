@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Play } from "lucide-react";
+import { KasKu3DCore } from "./KasKu3DCore";
 
 const TELEMETRY_ITEMS = [
   { label: "Arsitektur", value: "Golang + Next.js" },
@@ -27,7 +28,7 @@ export function LandingHero() {
   return (
     <section
       id="hero"
-      className="relative min-h-[92vh] w-full flex flex-col justify-between overflow-hidden bg-[#0b0d11] text-white"
+      className="relative min-h-[92vh] w-full flex flex-col justify-between overflow-hidden bg-black text-white"
     >
       {/* Animated Full-Bleed Architectural Photo */}
       <div
@@ -37,52 +38,58 @@ export function LandingHero() {
         <img
           src="/images/hero-kasku.jpg"
           alt="Meja kerja minimalis dengan arsitektur finansial yang tenang"
-          className="w-full h-full object-cover object-center animate-ken-burns opacity-80"
+          className="w-full h-full object-cover object-center animate-ken-burns opacity-65"
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-b from-[#0b0d11]/75 via-[#0b0d11]/45 to-[#0b0d11]/90"
+          className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/55 to-black/95"
         />
       </div>
 
       {/* Top Spacer for Fixed Navbar */}
-      <div className="h-24 sm:h-28 relative z-10" />
+      <div className="h-20 sm:h-24 relative z-10" />
 
-      {/* Main Hero Thesis */}
-      <div className="relative z-10 max-w-7xl w-full mx-auto px-5 sm:px-8 py-12 sm:py-20">
-        <div className="max-w-3xl space-y-6 animate-reveal-up">
-          <h1 className="font-display text-4xl sm:text-6xl lg:text-[4.5rem] font-semibold tracking-[-0.03em] leading-[1.04] text-balance text-white">
-            Presisi baru dalam mengelola kas pribadi.
-          </h1>
-          <p className="text-base sm:text-xl text-white/85 max-w-2xl leading-relaxed font-normal">
-            Pisahkan saldo bebas dari pos tabungan, pantau piutang dan langganan otomatis, serta simulasikan setiap pembelian wishlist sebelum uang keluar.
-          </p>
+      {/* Main Hero Thesis + Live 3D WebGL Telemetry Core */}
+      <div className="relative z-10 max-w-7xl w-full mx-auto px-5 sm:px-8 py-10 sm:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          <div className="lg:col-span-7 space-y-6 animate-reveal-up">
+            <h1 className="font-display text-4xl sm:text-6xl lg:text-[4.25rem] font-semibold tracking-[-0.03em] leading-[1.03] text-balance text-white">
+              Presisi baru dalam mengelola kas pribadi.
+            </h1>
+            <p className="text-base sm:text-xl text-[#e4e4e2] max-w-2xl leading-relaxed font-normal">
+              Pisahkan saldo bebas dari pos tabungan, pantau piutang dan langganan otomatis, serta simulasikan setiap pembelian wishlist sebelum uang keluar.
+            </p>
 
-          <div className="pt-4 flex flex-wrap items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-md bg-[#14b8a6] hover:bg-[#0d9488] text-[#0b0d11] font-semibold text-sm sm:text-base transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            >
-              <span>Buka Dashboard KasKu</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <a
-              href="#simulasi"
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-md border border-white/30 bg-white/5 hover:bg-white/12 text-white font-medium text-sm sm:text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14b8a6]"
-            >
-              <Play className="w-4 h-4 text-[#5eead4]" />
-              <span>Coba Simulasi Beli</span>
-            </a>
+            <div className="pt-3 flex flex-wrap items-center gap-4">
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm bg-white hover:bg-[#f5f5f3] text-black font-semibold text-sm sm:text-base transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+              >
+                <span>Buka Dashboard KasKu</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <a
+                href="#simulasi"
+                className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm border border-white/30 bg-white/5 hover:bg-white/15 text-white font-medium text-sm sm:text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+              >
+                <Play className="w-4 h-4 text-[#38bdf8]" />
+                <span>Coba Simulasi Beli</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 animate-reveal-up">
+            <KasKu3DCore compact />
           </div>
         </div>
       </div>
 
       {/* Bottom Telemetry Strip */}
-      <div className="relative z-10 border-t border-white/15 bg-[#0b0d11]/60 backdrop-blur-sm">
+      <div className="relative z-10 border-t border-white/15 bg-black/75 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-5 grid grid-cols-2 lg:grid-cols-4 gap-6">
           {TELEMETRY_ITEMS.map((item) => (
             <div key={item.label} className="space-y-1">
-              <div className="text-xs uppercase tracking-wider text-white/60 font-medium">
+              <div className="text-xs uppercase tracking-wider text-[#bbbcbc] font-medium">
                 {item.label}
               </div>
               <div className="font-mono text-sm sm:text-base font-medium text-white num-tabular">
