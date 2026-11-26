@@ -1,7 +1,9 @@
 package calc
 
 import (
+	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -487,4 +489,184 @@ func CalculateSisaHariDeadline(deadline *time.Time, refDate time.Time) *int {
 	diff := int(dlDay.Sub(refDay).Hours() / 24)
 	return &diff
 }
+
+// FormatRupiah helper format integer ke gaya Rupiah Indonesia (contoh: 35353 -> Rp 35.353, -5000 -> -Rp 5.000)
+func FormatRupiah(amount int64) string {
+	sign := ""
+	if amount < 0 {
+		sign = "-"
+		amount = -amount
+	}
+	s := strconv.FormatInt(amount, 10)
+	n := len(s)
+	if n <= 3 {
+		return sign + "Rp " + s
+	}
+
+	var sb strings.Builder
+	sb.WriteString(sign)
+	sb.WriteString("Rp ")
+
+	rem := n % 3
+	if rem > 0 {
+		sb.WriteString(s[:rem])
+		if rem < n {
+			sb.WriteString(".")
+		}
+	}
+	for i := rem; i < n; i += 3 {
+		sb.WriteString(s[i : i+3])
+		if i+3 < n {
+			sb.WriteString(".")
+		}
+	}
+	return sb.String()
+}
+
+// FinancialState snapshot kondisi keuangan user
+type FinancialState struct {
+	SaldoTotal                   int64
+	TotalTersimpan               int64
+	SaldoBebas                   int64
+	SaldoPos                     int64 // saldo pos terkait jika sumber="pos"
+	TagihanJatuhTempo7HariTotal int64 // total langganan & tagihan jatuh tempo <= 7 hari
+	RefDate                      time.Time
+}
+
+// SimulasiBeliResult hasil simulasi preview pembelian wishlist
+type SimulasiBeliResult struct {
+	Barang                   string   `json:"barang"`
+	Harga                    int64    `json:"harga"`
+	Sumber                   string   `json:"sumber"`
+	SaldoTotalSekarang       int64    `json:"saldo_total_sekarang"`
+	SaldoTotalSetelah        int64    `json:"saldo_total_setelah"`
+	SaldoBebasSekarang       int64    `json:"saldo_bebas_sekarang"`
+	SaldoBebasSetelah        int64    `json:"saldo_bebas_setelah"`
+	TotalTersimpanSekarang   int64    `json:"total_tersimpan_sekarang"`
+	TotalTersimpanSetelah    int64    `json:"total_tersimpan_setelah"`
+	JatahHarianSekarang      int64    `json:"jatah_harian_sekarang"`
+	JatahHarianSetelah       int64    `json:"jatah_harian_setelah"`
+	SisaHariBulanIni         int      `json:"sisa_hari_bulan_ini"`
+	Cukup                    bool     `json:"cukup"`
+	KurangBerapa             int64    `json:"kurang_berapa"`
+	TagihanBelumDibayarTotal int64    `json:"tagihan_belum_dibayar_total"`
+	AmanUntukTagihan         bool     `json:"aman_untuk_tagihan"`
+	Peringatan               []string `json:"peringatan"`
+	Pesan                    string   `json:"pesan"`
+}
+
+// SimulasiBeli menghitung simulasi preview pembelian secara deterministik
+func SimulasiBeli(namaBarang string, harga int64, sumber string, state FinancialState) SimulasiBeliResult {
+	if strings.TrimSpace(namaBarang) == "" {
+		namaBarang = "barang ini"
+	}
+	if sumber != "pos" {
+		sumber = "bebas"
+	}
+
+	sisaHari := SisaHariBulanIni(state.RefDate)
+	jatahHarianSekarang := CalculateJatahHarian(state.SaldoBebas, sisaHari)
+
+	res := SimulasiBeliResult{
+		Barang:                   namaBarang,
+		Harga:                    harga,
+		Sumber:                   sumber,
+		SaldoTotalSekarang:       state.SaldoTotal,
+		SaldoBebasSekarang:       state.SaldoBebas,
+		TotalTersimpanSekarang:   state.TotalTersimpan,
+		JatahHarianSekarang:      jatahHarianSekarang,
+		SisaHariBulanIni:         sisaHari,
+		TagihanBelumDibayarTotal: state.TagihanJatuhTempo7HariTotal,
+		Peringatan:               make([]string, 0),
+	}
+
+	if sumber == "bebas" {
+		res.SaldoTotalSetelah = state.SaldoTotal - harga
+		res.SaldoBebasSetelah = state.SaldoBebas - harga
+		res.TotalTersimpanSetelah = state.TotalTersimpan
+
+		if state.SaldoBebas >= harga {
+			res.Cukup = true
+			res.KurangBerapa = 0
+		} else {
+			res.Cukup = false
+			res.KurangBerapa = harga - state.SaldoBebas
+			res.Peringatan = append(res.Peringatan, fmt.Sprintf("Saldo jajan tidak cukup, kurang %s", FormatRupiah(res.KurangBerapa)))
+		}
+	} else {
+		// sumber == "pos"
+		res.SaldoTotalSetelah = state.SaldoTotal - harga
+		res.TotalTersimpanSetelah = state.TotalTersimpan - harga
+		res.SaldoBebasSetelah = state.SaldoBebas
+
+		if state.SaldoPos >= harga {
+			res.Cukup = true
+			res.KurangBerapa = 0
+		} else {
+			res.Cukup = false
+			res.KurangBerapa = harga - state.SaldoPos
+			res.Peringatan = append(res.Peringatan, fmt.Sprintf("Saldo pos tabungan tidak cukup, kurang %s", FormatRupiah(res.KurangBerapa)))
+		}
+	}
+
+	res.JatahHarianSetelah = CalculateJatahHarian(res.SaldoBebasSetelah, sisaHari)
+
+	// Cek keamanan untuk tagihan <= 7 hari
+	// Aman jika saldo_bebas_setelah >= state.TagihanJatuhTempo7HariTotal
+	if res.SaldoBebasSetelah >= state.TagihanJatuhTempo7HariTotal {
+		res.AmanUntukTagihan = true
+	} else {
+		res.AmanUntukTagihan = false
+		res.Peringatan = append(res.Peringatan, "Setelah beli, saldo jajan tidak cukup untuk membayar langganan/tagihan yang jatuh tempo dalam 7 hari")
+	}
+
+	// Peringatan jatah harian turun
+	if res.JatahHarianSetelah < res.JatahHarianSekarang {
+		res.Peringatan = append(res.Peringatan, fmt.Sprintf("Jatah harian turun dari %s menjadi %s", FormatRupiah(res.JatahHarianSekarang), FormatRupiah(res.JatahHarianSetelah)))
+	}
+
+	// Peringatan saldo total setelah membeli kurang dari 50.000
+	if res.SaldoTotalSetelah < 50000 {
+		res.Peringatan = append(res.Peringatan, "Saldo total setelah membeli kurang dari Rp 50.000")
+	}
+
+	res.Pesan = fmt.Sprintf("Jika membeli %s, saldo kamu akan tersisa %s (saldo jajan %s).",
+		res.Barang,
+		FormatRupiah(res.SaldoTotalSetelah),
+		FormatRupiah(res.SaldoBebasSetelah),
+	)
+
+	return res
+}
+
+// WishlistPlanItem model untuk rencana beli (plan)
+type WishlistPlanItem struct {
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Price            int64  `json:"price"`
+	Priority         string `json:"priority"`
+	SaldoBebasSisa   int64  `json:"saldo_bebas_sisa"`
+	Terjangkau       bool   `json:"terjangkau"`
+}
+
+// CalculateWishlistPlan menyusun rencana beli berurutan berdasarkan saldo bebas
+func CalculateWishlistPlan(items []WishlistPlanItem, saldoBebasAwal int64) ([]WishlistPlanItem, int) {
+	currentSaldo := saldoBebasAwal
+	reachableCount := 0
+
+	results := make([]WishlistPlanItem, len(items))
+	for i, item := range items {
+		currentSaldo -= item.Price
+		item.SaldoBebasSisa = currentSaldo
+		if currentSaldo >= 0 {
+			item.Terjangkau = true
+			reachableCount++
+		} else {
+			item.Terjangkau = false
+		}
+		results[i] = item
+	}
+	return results, reachableCount
+}
+
 

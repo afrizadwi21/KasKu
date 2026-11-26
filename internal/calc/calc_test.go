@@ -1,6 +1,7 @@
 package calc_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -284,4 +285,99 @@ func TestSavingsCalculations(t *testing.T) {
 		t.Fatalf("Ekspektasi perlu setor per bulan 490000, didapat %d", perlu)
 	}
 }
+
+func TestSimulasiBeli(t *testing.T) {
+	refDate := time.Date(2026, 11, 26, 10, 0, 0, 0, time.UTC)
+	state := calc.FinancialState{
+		SaldoTotal:                   65353,
+		TotalTersimpan:               20000,
+		SaldoBebas:                   45353,
+		SaldoPos:                     20000, // Dana Darurat
+		TagihanJatuhTempo7HariTotal: 0,
+		RefDate:                      refDate,
+	}
+
+	// 1. Headset 30000 dari saldo bebas:
+	// saldo_total_setelah: 35353, saldo_bebas_setelah: 15353, cukup: true
+	sim1 := calc.SimulasiBeli("Headset", 30000, "bebas", state)
+	if !sim1.Cukup {
+		t.Errorf("Ekspektasi cukup=true, didapat false")
+	}
+	if sim1.SaldoTotalSetelah != 35353 {
+		t.Errorf("Ekspektasi saldo total setelah 35353, didapat %d", sim1.SaldoTotalSetelah)
+	}
+	if sim1.SaldoBebasSetelah != 15353 {
+		t.Errorf("Ekspektasi saldo bebas setelah 15353, didapat %d", sim1.SaldoBebasSetelah)
+	}
+	if !strings.Contains(sim1.Pesan, "Rp 35.353") || !strings.Contains(sim1.Pesan, "Rp 15.353") {
+		t.Errorf("Pesan tidak sesuai format: %s", sim1.Pesan)
+	}
+
+	// 2. Item 50000: cukup=false, kurang_berapa=4647 (50000 - 45353)
+	sim2 := calc.SimulasiBeli("Keyboard", 50000, "bebas", state)
+	if sim2.Cukup {
+		t.Errorf("Ekspektasi cukup=false, didapat true")
+	}
+	if sim2.KurangBerapa != 4647 {
+		t.Errorf("Ekspektasi kurang berapa 4647, didapat %d", sim2.KurangBerapa)
+	}
+	if len(sim2.Peringatan) == 0 {
+		t.Errorf("Ekspektasi ada peringatan saat saldo jajan kurang")
+	}
+
+	// 3. Item 15000 dari pos "Dana Darurat":
+	// saldo_total turun 15000 (50353), total_tersimpan turun 15000 (5000), saldo_bebas tetap 45353
+	sim3 := calc.SimulasiBeli("Beli Obat", 15000, "pos", state)
+	if !sim3.Cukup {
+		t.Errorf("Ekspektasi pos cukup=true, didapat false")
+	}
+	if sim3.SaldoTotalSetelah != 50353 {
+		t.Errorf("Ekspektasi saldo total setelah 50353, didapat %d", sim3.SaldoTotalSetelah)
+	}
+	if sim3.TotalTersimpanSetelah != 5000 {
+		t.Errorf("Ekspektasi total tersimpan setelah 5000, didapat %d", sim3.TotalTersimpanSetelah)
+	}
+	if sim3.SaldoBebasSetelah != 45353 {
+		t.Errorf("Ekspektasi saldo bebas tetap 45353, didapat %d", sim3.SaldoBebasSetelah)
+	}
+
+	// 4. AmanUntukTagihan = false jika tagihan 7 hari melebihi saldo_bebas_setelah
+	stateWithTagihan := state
+	stateWithTagihan.TagihanJatuhTempo7HariTotal = 20000 // setelah beli 30000, sisa bebas 15353 < 20000
+	sim4 := calc.SimulasiBeli("Headset", 30000, "bebas", stateWithTagihan)
+	if sim4.AmanUntukTagihan {
+		t.Errorf("Ekspektasi aman_untuk_tagihan=false, didapat true")
+	}
+}
+
+func TestWishlistPlan(t *testing.T) {
+	items := []calc.WishlistPlanItem{
+		{ID: "1", Name: "Mouse Gaming", Price: 85000, Priority: "tinggi"},
+		{ID: "2", Name: "Headset", Price: 30000, Priority: "sedang"},
+	}
+
+	plan, reachable := calc.CalculateWishlistPlan(items, 45353)
+	// Item 1: 45353 - 85000 = -39647 (tidak terjangkau)
+	// Item 2: -39647 - 30000 = -69647 (tidak terjangkau)
+	if reachable != 0 {
+		t.Errorf("Ekspektasi reachable 0, didapat %d", reachable)
+	}
+	if plan[0].Terjangkau {
+		t.Errorf("Ekspektasi item 1 tidak terjangkau")
+	}
+
+	// Cek jika urutannya Headset dulu:
+	items2 := []calc.WishlistPlanItem{
+		{ID: "2", Name: "Headset", Price: 30000, Priority: "sedang"},
+		{ID: "1", Name: "Mouse Gaming", Price: 85000, Priority: "tinggi"},
+	}
+	plan2, reachable2 := calc.CalculateWishlistPlan(items2, 45353)
+	if reachable2 != 1 {
+		t.Errorf("Ekspektasi reachable 1, didapat %d", reachable2)
+	}
+	if !plan2[0].Terjangkau || plan2[1].Terjangkau {
+		t.Errorf("Ekspektasi hanya item pertama yang terjangkau")
+	}
+}
+
 

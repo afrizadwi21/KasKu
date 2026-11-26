@@ -67,5 +67,11 @@ BEGIN
         INSERT INTO savings_movements (user_id, pot_id, type, amount, date, note, created_at)
         VALUES (v_user_id, v_pot_id, 'setor', 20000, '2026-11-26', 'Setoran awal dana darurat', '2026-11-26 08:30:00+07');
     END;
+
+    -- 10. Wishlist items: "Headset" 30.000 (sedang) dan "Mouse Gaming" 85.000 (tinggi)
+    INSERT INTO wishlist_items (user_id, name, price, priority, category, note, target_date, status, created_at)
+    VALUES 
+        (v_user_id, 'Headset', 30000, 'sedang', 'Belanja', 'Headset kerja', '2026-12-15', 'aktif', '2026-11-26 09:30:00+07'),
+        (v_user_id, 'Mouse Gaming', 85000, 'tinggi', 'Belanja', 'Mouse gaming presisi', '2026-12-30', 'aktif', '2026-11-26 09:35:00+07');
 END;
 $$ LANGUAGE plpgsql;

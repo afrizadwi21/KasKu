@@ -58,8 +58,10 @@ func (h *Handler) ExportCSV(c *fiber.Ctx) error {
 		       COALESCE(
 		           (SELECT string_agg(ti.name || ' (' || ti.qty || 'x' || ti.unit_price || '=' || ti.subtotal || ')', '; ')
 		            FROM transaction_items ti WHERE ti.transaction_id = t.id), ''
-		       ) AS rincian_item
+		       ) AS rincian_item,
+		       COALESCE(w.name, '') AS dari_wishlist
 		FROM transactions t
+		LEFT JOIN wishlist_items w ON w.bought_transaction_id = t.id
 		WHERE t.user_id = $1
 		ORDER BY t.date ASC, t.created_at ASC, t.id ASC
 	`, userID)
@@ -71,16 +73,16 @@ func (h *Handler) ExportCSV(c *fiber.Ctx) error {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 
-	header := []string{"ID", "Tanggal", "Jenis", "Kategori", "Pihak (Party)", "Sumber (Source)", "Keterangan (Note)", "Nominal (Amount)", "Rincian Item"}
+	header := []string{"ID", "Tanggal", "Jenis", "Kategori", "Pihak (Party)", "Sumber (Source)", "Keterangan (Note)", "Nominal (Amount)", "Rincian Item", "Dari Wishlist"}
 	if err := writer.Write(header); err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menulis header CSV")
 	}
 
 	for rows.Next() {
-		var id, txType, category, party, source, note, rincianItem string
+		var id, txType, category, party, source, note, rincianItem, dariWishlist string
 		var dateVal string
 		var amount int64
-		if err := rows.Scan(&id, &dateVal, &txType, &category, &party, &source, &note, &amount, &rincianItem); err != nil {
+		if err := rows.Scan(&id, &dateVal, &txType, &category, &party, &source, &note, &amount, &rincianItem, &dariWishlist); err != nil {
 			continue
 		}
 		record := []string{
@@ -93,6 +95,7 @@ func (h *Handler) ExportCSV(c *fiber.Ctx) error {
 			note,
 			strconv.FormatInt(amount, 10),
 			rincianItem,
+			dariWishlist,
 		}
 		_ = writer.Write(record)
 	}
@@ -148,6 +151,19 @@ func (h *Handler) GetMeta(c *fiber.Ctx) error {
 		}
 	}
 
+	// Barang wishlist aktif
+	wRows, err := h.DB.Query("SELECT DISTINCT TRIM(name) FROM wishlist_items WHERE user_id = $1 AND status = 'aktif' ORDER BY TRIM(name) ASC", userID)
+	wishlistNames := make([]string, 0)
+	if err == nil {
+		defer wRows.Close()
+		for wRows.Next() {
+			var w string
+			if err := wRows.Scan(&w); err == nil && w != "" {
+				wishlistNames = append(wishlistNames, w)
+			}
+		}
+	}
+
 	return c.JSON(fiber.Map{
 		"kategori": fiber.Map{
 			"masuk":  calc.ValidMasukCategories,
@@ -156,6 +172,7 @@ func (h *Handler) GetMeta(c *fiber.Ctx) error {
 		"party":        parties,
 		"source":       sources,
 		"pos_tabungan": posTabungan,
+		"wishlist":     wishlistNames,
 	})
 }
 

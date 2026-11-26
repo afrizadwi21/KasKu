@@ -23,7 +23,8 @@ Dibangun menggunakan **Golang** dan **Fiber**, terintegrasi dengan database **Po
   - [7. Langganan Rutin](#7-langganan-rutin)
   - [8. Tagihan Sekali Bayar](#8-tagihan-sekali-bayar)
   - [9. Pos Tabungan / Uang Disisihkan (`/api/savings/*`)](#9-pos-tabungan--uang-disisihkan-apisavings)
-  - [10. Pengaturan, Ekspor CSV & Meta Autocomplete](#10-pengaturan-ekspor-csv--meta-autocomplete)
+  - [10. Wishlist & Simulasi Beli (`/api/wishlist/*`)](#10-wishlist--simulasi-beli-apiwishlist)
+  - [11. Pengaturan, Ekspor CSV & Meta Autocomplete](#11-pengaturan-ekspor-csv--meta-autocomplete)
 
 ---
 
@@ -623,7 +624,95 @@ curl -X GET http://localhost:8080/api/export-savings.csv \
 
 ---
 
-### 10. Pengaturan, Ekspor CSV & Meta Autocomplete
+### 10. Wishlist & Simulasi Beli (`/api/wishlist/*`)
+
+Fitur Wishlist memungkinkan pengguna mencatat daftar barang impian yang ingin dibeli, dilengkapi dengan **fitur Simulasi (Preview)** untuk melihat dampak finansial sebelum benar-benar membelinya.
+
+#### Konsep Wishlist & Simulasi:
+- **Hanya Keinginan**: Menambah item wishlist **TIDAK** mengubah saldo dan **TIDAK** membuat transaksi di awal.
+- **Simulasi Bebas Efek Samping**: Endpoint `/preview` melakukan kalkulasi murni di memori tanpa mengubah atau menyimpan data apapun ke database.
+- **Sumber Dana**:
+  - `bebas`: Memotong langsung dari saldo bebas (`saldo_total` turun, `saldo_bebas` turun, tabungan tetap).
+  - `pos`: Memotong dari pos tabungan khusus (`saldo_total` turun, `total_tersimpan` turun, `saldo_bebas` tetap).
+- **Pembelian Nyata (`/buy`)**:
+  - Otomatis mencatat 1 baris transaksi keluar di tabel `transactions`.
+  - Otomatis mencatat 1 baris rincian di tabel `transaction_items` (`qty: 1, unit_price: harga`).
+  - Menandai status wishlist menjadi `dibeli`.
+- **Undo Pembelian (`/undo-buy`)**: Membatalkan pembelian, menghapus transaksi keluar (dan mutasi tabungan terkait), serta mengembalikan status wishlist menjadi `aktif`.
+
+#### Alur Contoh Penggunaan:
+1. **Tambah Barang**: Tambah barang "Headset" seharga Rp 30.000 (prioritas sedang).
+2. **Lihat Preview**: Panggil `GET /api/wishlist/:id/preview?sumber=bebas`. Backend menghitung:
+   - "Jika membeli Headset, saldo kamu akan tersisa Rp 35.353 (saldo jajan Rp 15.353)."
+   - Cek keamanan apakah sisa saldo jajan cukup untuk melunasi tagihan/langganan yang jatuh tempo dalam 7 hari.
+3. **Beli Barang**: Panggil `POST /api/wishlist/:id/buy`. Transaksi keluar resmi tercatat, rincian barang tersimpan.
+4. **Cek Rencana Beli (Plan)**: Panggil `GET /api/wishlist/plan` untuk melihat urutan barang aktif yang masih terjangkau berdasarkan saldo bebas saat ini.
+
+#### Daftar Semua Item Wishlist (`GET /api/wishlist?status=aktif`)
+```bash
+curl -X GET "http://localhost:8080/api/wishlist?status=aktif" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Tambah Item Wishlist Baru (`POST /api/wishlist`)
+```bash
+curl -X POST http://localhost:8080/api/wishlist \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "name": "Headset",
+    "price": 30000,
+    "priority": "sedang",
+    "category": "Belanja",
+    "target_date": "2026-12-15",
+    "note": "Headset kerja"
+  }'
+```
+
+#### Simulasi Preview Item Wishlist (`GET /api/wishlist/:id/preview`)
+```bash
+curl -X GET "http://localhost:8080/api/wishlist/<WISHLIST_ID>/preview?sumber=bebas" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Simulasi Harga Sembarang / Bebas (`POST /api/wishlist/preview`)
+```bash
+curl -X POST http://localhost:8080/api/wishlist/preview \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "harga": 50000,
+    "sumber": "bebas"
+  }'
+```
+
+#### Beli Item Wishlist (`POST /api/wishlist/:id/buy`)
+```bash
+curl -X POST http://localhost:8080/api/wishlist/<WISHLIST_ID>/buy \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "sumber": "bebas",
+    "party": "Toko Audio",
+    "note": "Beli Headset kerja"
+  }'
+```
+
+#### Batalkan Pembelian Wishlist (`POST /api/wishlist/:id/undo-buy`)
+```bash
+curl -X POST http://localhost:8080/api/wishlist/<WISHLIST_ID>/undo-buy \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+#### Rencana Pembelian Wishlist (`GET /api/wishlist/plan`)
+```bash
+curl -X GET http://localhost:8080/api/wishlist/plan \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+---
+
+### 11. Pengaturan, Ekspor CSV & Meta Autocomplete
 
 #### Ambil Saldo Awal Pengguna (`GET /api/settings/opening-balance`)
 ```bash

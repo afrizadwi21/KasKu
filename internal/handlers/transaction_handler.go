@@ -531,6 +531,13 @@ func (h *Handler) DeleteTransaction(c *fiber.Ctx) error {
 		return ErrorResponse(c, fiber.StatusConflict, "Transaksi ini berasal dari tabungan, batalkan lewat riwayat tabungan")
 	}
 
+	// Cek apakah transaksi ini berasal dari wishlist
+	var hasWishlistBought bool
+	err = h.DB.QueryRow("SELECT true FROM wishlist_items WHERE bought_transaction_id = $1 AND user_id = $2", id, userID).Scan(&hasWishlistBought)
+	if err == nil && hasWishlistBought {
+		return ErrorResponse(c, fiber.StatusConflict, "Transaksi ini berasal dari wishlist, batalkan lewat undo-buy")
+	}
+
 	result, err := h.DB.Exec("DELETE FROM transactions WHERE id = $1 AND user_id = $2", id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghapus transaksi")

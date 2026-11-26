@@ -83,7 +83,19 @@ func (h *Handler) RegisterRoutes(app *fiber.App) {
 	api.Post("/savings/:id/spend", h.SpendSavings)
 	api.Post("/savings/:id/close", h.CloseSavingsPot)
 
-	// 8. Pengaturan, Ekspor, dan Meta
+	// 8. Wishlist & Simulasi Beli
+	api.Get("/wishlist", h.GetWishlist)
+	api.Post("/wishlist", h.CreateWishlistItem)
+	api.Post("/wishlist/preview", h.PreviewWishlistCustom)
+	api.Get("/wishlist/plan", h.GetWishlistPlan)
+	api.Get("/wishlist/:id", h.GetWishlistItemByID)
+	api.Put("/wishlist/:id", h.UpdateWishlistItem)
+	api.Delete("/wishlist/:id", h.DeleteWishlistItem)
+	api.Get("/wishlist/:id/preview", h.PreviewWishlistByID)
+	api.Post("/wishlist/:id/buy", h.BuyWishlistItem)
+	api.Post("/wishlist/:id/undo-buy", h.UndoBuyWishlistItem)
+
+	// 9. Pengaturan, Ekspor, dan Meta
 	api.Get("/settings/opening-balance", h.GetOpeningBalanceSetting)
 	api.Put("/settings/opening-balance", h.UpdateOpeningBalanceSetting)
 	api.Get("/export.csv", h.ExportCSV)

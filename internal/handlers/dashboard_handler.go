@@ -237,18 +237,41 @@ func (h *Handler) GetOverview(c *fiber.Ctx) error {
 	sisaHariBulanIni := calc.SisaHariBulanIni(today)
 	jatahHarian := calc.CalculateJatahHarian(saldoBebas, sisaHariBulanIni)
 
+	// Hitung wishlist aktif
+	var wishlistAktifJumlah, wishlistBisaDibeliJumlah int
+	var wishlistTotalHarga int64
+	wRows, err := h.DB.QueryContext(context.Background(), `
+		SELECT price FROM wishlist_items WHERE user_id = $1 AND status = 'aktif'
+	`, userID)
+	if err == nil {
+		defer wRows.Close()
+		for wRows.Next() {
+			var p int64
+			if err := wRows.Scan(&p); err == nil {
+				wishlistAktifJumlah++
+				wishlistTotalHarga += p
+				if p <= saldoBebas {
+					wishlistBisaDibeliJumlah++
+				}
+			}
+		}
+	}
+
 	return c.JSON(fiber.Map{
-		"saldo":                saldoTotal,
-		"saldo_total":          saldoTotal,
-		"total_tersimpan":      totalTersimpan,
-		"saldo_bebas":          saldoBebas,
-		"sisa_hari_bulan_ini":  sisaHariBulanIni,
-		"jatah_harian":         jatahHarian,
-		"piutang_total":        piutangTotal,
-		"hutang_saya_total":    hutangSayaTotal,
-		"belum_dibayar_total":  belumDibayarTotal,
-		"belum_dibayar_jumlah": belumDibayarJumlah,
-		"kekayaan_bersih":      kekayaanBersih,
+		"saldo":                       saldoTotal,
+		"saldo_total":                 saldoTotal,
+		"total_tersimpan":             totalTersimpan,
+		"saldo_bebas":                 saldoBebas,
+		"sisa_hari_bulan_ini":         sisaHariBulanIni,
+		"jatah_harian":                jatahHarian,
+		"piutang_total":               piutangTotal,
+		"hutang_saya_total":           hutangSayaTotal,
+		"belum_dibayar_total":         belumDibayarTotal,
+		"belum_dibayar_jumlah":        belumDibayarJumlah,
+		"kekayaan_bersih":             kekayaanBersih,
+		"wishlist_aktif_jumlah":       wishlistAktifJumlah,
+		"wishlist_total_harga":        wishlistTotalHarga,
+		"wishlist_bisa_dibeli_jumlah": wishlistBisaDibeliJumlah,
 	})
 }
 
