@@ -394,6 +394,89 @@ export function Header({
           </div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation Bar with Center Raised FAB */}
+      <nav
+        aria-label="Navigasi Bawah Mobile"
+        className={`lg:hidden fixed bottom-0 inset-x-0 z-40 rounded-t-2xl border-t shadow-[0_-8px_30px_-10px_rgba(0,0,0,0.18)] backdrop-blur-md ${
+          isDark
+            ? "border-[#f4f7f5]/10 bg-[#0b110e]/95 text-[#f4f7f5]"
+            : "border-[#0b110e]/10 bg-white/95 text-[#0b110e]"
+        }`}
+      >
+        <div className="grid grid-cols-5 items-end h-16 px-2 pb-1.5">
+          {[
+            { id: "dashboard", label: "Beranda", icon: LayoutDashboard },
+            { id: "transactions", label: "Riwayat", icon: ListOrdered },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelectTab(item.id)}
+                className={`flex flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-medium transition-colors ${
+                  isActive
+                    ? isDark
+                      ? "text-[#34d399] font-semibold"
+                      : "text-[#059669] font-semibold"
+                    : mutedCls
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+
+          {/* Center Raised FAB */}
+          <div className="flex flex-col items-center justify-end -mt-6">
+            <button
+              type="button"
+              onClick={onOpenModal}
+              aria-label="Catat Kas"
+              className={`flex h-13 w-13 items-center justify-center rounded-full bg-[#10b981] text-[#070a09] shadow-lg ring-4 transition-transform active:scale-95 ${
+                isDark ? "ring-[#070a09]" : "ring-[#f7f8f7]"
+              }`}
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+            <span
+              className={`mt-0.5 text-[10px] font-semibold ${
+                isDark ? "text-[#34d399]" : "text-[#059669]"
+              }`}
+            >
+              Catat
+            </span>
+          </div>
+
+          {[
+            { id: "savings", label: "Tabungan", icon: PiggyBank },
+            { id: "profile", label: "Profil", icon: User },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelectTab(item.id)}
+                className={`flex flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-medium transition-colors ${
+                  isActive
+                    ? isDark
+                      ? "text-[#34d399] font-semibold"
+                      : "text-[#059669] font-semibold"
+                    : mutedCls
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </>
   );
 }

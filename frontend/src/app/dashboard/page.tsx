@@ -942,7 +942,7 @@ export default function DashboardPage() {
           onToggleTheme={handleToggleTheme}
         />
 
-        <main className="flex-1 min-w-0 px-4 py-6 sm:px-8 max-w-6xl w-full mx-auto">
+        <main className="flex-1 min-w-0 px-4 pt-6 pb-24 lg:py-6 sm:px-8 max-w-6xl w-full mx-auto">
           {errorMsg && (
             <div className={`mb-5 rounded-lg border px-4 py-3 text-xs ${isDark ? "border-red-500/30 bg-red-950/40 text-red-200" : "border-red-300 bg-red-50 text-red-800"}`}>
               <span>{errorMsg}</span>
