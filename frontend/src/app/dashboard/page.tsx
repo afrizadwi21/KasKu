@@ -897,10 +897,6 @@ export default function DashboardPage() {
                     Data real dari akun {user.email}
                   </p>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#10b981]/30 bg-[#10b981]/10 px-3 py-1 text-[11px] font-mono text-[#059669]">
-                  <span className="h-2 w-2 rounded-full bg-[#10b981] animate-pulse" />
-                  <span>Sinkronisasi Real-time</span>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
