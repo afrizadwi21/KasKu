@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowUpRight, ShieldCheck, Lock, FileSpreadsheet, RotateCcw } from "lucide-react";
+import { Scroll3DFrame } from "./Scroll3DFrame";
 
 const PRIVACY_POINTS = [
   {
@@ -50,6 +51,18 @@ export function LandingFooter() {
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>
+
+            <Scroll3DFrame direction="left" intensity={1.1} className="pt-4">
+              <div className="overflow-hidden rounded-sm border border-white/15 bg-black">
+                <div className="aspect-[16/10] overflow-hidden">
+                  <img
+                    src="/images/3d-privacy-lock.jpg"
+                    alt="Render 3D gembok keamanan data pribadi KasKu"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </Scroll3DFrame>
           </div>
 
           <div className="lg:col-span-7 divide-y divide-white/15 border-y border-white/15">

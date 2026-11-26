@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { Scroll3DFrame } from "./Scroll3DFrame";
 
 const FEATURE_MODULES = [
   {
@@ -15,8 +16,8 @@ const FEATURE_MODULES = [
       { label: "Saldo Berjalan", value: "Langsung hitung sisa uang setelah tiap transaksi" },
       { label: "Batas Pengeluaran", value: "Peringatan kalau belanja melebihi uang jajan" },
     ],
-    image: "/images/telemetry-ledger.jpg",
-    imageAlt: "Ilustrasi pencatatan kas harian KasKu",
+    image: "/images/3d-card.jpg",
+    imageAlt: "Render 3D kartu finansial KasKu",
   },
   {
     id: "tabungan",
@@ -28,8 +29,8 @@ const FEATURE_MODULES = [
       { label: "Belanja dari Tabungan", value: "Bayar langsung dari pos tanpa memotong uang jajan" },
       { label: "Target & Tenggat", value: "Hitung otomatis berapa yang perlu ditabung tiap bulan" },
     ],
-    image: "/images/vault-clarity.jpg",
-    imageAlt: "Wadah penyimpanan modular yang melambangkan pos tabungan KasKu",
+    image: "/images/3d-vault.jpg",
+    imageAlt: "Render 3D brankas pos tabungan KasKu",
   },
   {
     id: "wishlist",
@@ -41,8 +42,8 @@ const FEATURE_MODULES = [
       { label: "Rencana Belanja", value: "Urutkan barang prioritas yang sudah sanggup dibeli" },
       { label: "Batal Beli", value: "Salah pencet beli? Kembalikan saldo dan barang dengan satu klik" },
     ],
-    image: "/images/hero-kasku.jpg",
-    imageAlt: "Ruang kerja minimalis untuk merencanakan pembelian wishlist",
+    image: "/images/3d-wishlist.jpg",
+    imageAlt: "Render 3D barang wishlist KasKu",
   },
   {
     id: "kewajiban",
@@ -54,8 +55,8 @@ const FEATURE_MODULES = [
       { label: "Langganan Rutin", value: "Pengingat mingguan, bulanan, 3-bulanan, dan tahunan" },
       { label: "Rekap Tagihan", value: "Peringatan jika total tagihan melebihi uang jajan" },
     ],
-    image: "/images/telemetry-ledger.jpg",
-    imageAlt: "Catatan rapi untuk hutang piutang dan langganan rutin",
+    image: "/images/3d-ledger-flow.jpg",
+    imageAlt: "Render 3D catatan rapi untuk hutang piutang dan langganan rutin",
   },
 ];
 
@@ -160,12 +161,12 @@ export function LandingFeatures() {
             </div>
           </div>
 
-          <div className="lg:col-span-6 [perspective:1200px]">
-            <div className="group relative overflow-hidden rounded-sm border border-[#e4e4e2] bg-[#f5f5f3] transition-transform duration-500 ease-out hover:[transform:rotateX(2deg)_rotateY(-3deg)]">
+          <Scroll3DFrame direction="right" intensity={1.15} className="lg:col-span-6">
+            <div className="group relative overflow-hidden rounded-sm border border-[#e4e4e2] bg-[#f5f5f3]">
               <div className="aspect-[4/3] overflow-hidden">
                 <img
-                  src="/images/telemetry-ledger.jpg"
-                  alt="Catatan keuangan pribadi KasKu yang rapi"
+                  src="/images/3d-ledger-flow.jpg"
+                  alt="Render 3D kartu catatan keuangan pribadi KasKu"
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                 />
               </div>
@@ -174,7 +175,7 @@ export function LandingFeatures() {
                 <span className="font-mono num-tabular text-black">Ringkas & Jelas</span>
               </div>
             </div>
-          </div>
+          </Scroll3DFrame>
         </div>
       </section>
 
@@ -245,8 +246,8 @@ export function LandingFeatures() {
               </div>
             </div>
 
-            <div className="lg:col-span-6 [perspective:1200px]">
-              <div className="group overflow-hidden rounded-sm border border-[#e4e4e2] bg-white transition-transform duration-500 ease-out hover:[transform:rotateX(2deg)_rotateY(3deg)]">
+            <Scroll3DFrame direction="left" intensity={1.15} className="lg:col-span-6">
+              <div className="group overflow-hidden rounded-sm border border-[#e4e4e2] bg-black">
                 <div className="aspect-[4/3] overflow-hidden">
                   <img
                     key={activeModule.image}
@@ -256,7 +257,7 @@ export function LandingFeatures() {
                   />
                 </div>
               </div>
-            </div>
+            </Scroll3DFrame>
           </div>
         </div>
       </section>
@@ -337,7 +338,8 @@ export function LandingFeatures() {
           </div>
 
           {/* Live Preview Panel */}
-          <div className="lg:col-span-7 rounded-sm border border-[#e4e4e2] bg-[#f5f5f3] p-6 sm:p-8 space-y-6">
+          <Scroll3DFrame direction="right" intensity={0.75} className="lg:col-span-7">
+            <div className="rounded-sm border border-[#e4e4e2] bg-[#f5f5f3] p-6 sm:p-8 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-[#e4e4e2]">
               <div>
                 <div className="text-xs uppercase tracking-wider text-[#4a4d52]">
@@ -422,7 +424,8 @@ export function LandingFeatures() {
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
-          </div>
+            </div>
+          </Scroll3DFrame>
         </div>
       </section>
     </div>

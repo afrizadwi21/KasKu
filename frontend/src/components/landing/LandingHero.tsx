@@ -29,10 +29,12 @@ export function LandingHero() {
       id="hero"
       className="relative min-h-[92vh] w-full flex flex-col justify-between overflow-hidden bg-black text-white"
     >
-      {/* Animated Full-Bleed Architectural Photo */}
+      {/* Animated Full-Bleed Architectural Photo with 3D Scroll Depth */}
       <div
-        className="absolute inset-0 z-0 overflow-hidden"
-        style={{ transform: `translate3d(0, ${scrollY * 0.16}px, 0)` }}
+        className="absolute inset-0 z-0 overflow-hidden [perspective:1200px]"
+        style={{
+          transform: `translate3d(0, ${scrollY * 0.22}px, 0) scale(${1 + Math.min(0.12, scrollY * 0.00018)})`,
+        }}
       >
         <img
           src="/images/hero-kasku.jpg"
@@ -49,7 +51,13 @@ export function LandingHero() {
       <div className="h-24 sm:h-28 relative z-10" />
 
       {/* Main Hero Thesis */}
-      <div className="relative z-10 max-w-7xl w-full mx-auto px-5 sm:px-8 py-12 sm:py-20">
+      <div
+        className="relative z-10 max-w-7xl w-full mx-auto px-5 sm:px-8 py-12 sm:py-20 transition-transform duration-150 ease-out will-change-transform"
+        style={{
+          transform: `translate3d(0, ${-scrollY * 0.08}px, 0)`,
+          opacity: Math.max(0.2, 1 - scrollY / 750),
+        }}
+      >
         <div className="max-w-3xl space-y-6 animate-reveal-up">
           <h1 className="font-display text-5xl sm:text-7xl lg:text-[5.25rem] text-balance text-white">
             Tahu persis uang yang boleh dipakai hari ini.
