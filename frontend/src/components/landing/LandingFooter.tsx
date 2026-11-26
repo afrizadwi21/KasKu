@@ -35,7 +35,7 @@ export function LandingFooter() {
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-5 space-y-5">
-            <h2 className="font-display text-3xl sm:text-4xl font-semibold tracking-[-0.025em] leading-[1.1] text-white">
+            <h2 className="font-display text-4xl sm:text-5xl text-white">
               Data keuangan Anda hanya untuk Anda.
             </h2>
             <p className="text-base text-[#bbbcbc] leading-relaxed">

@@ -116,7 +116,7 @@ export function LandingFeatures() {
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           <div className="lg:col-span-6 space-y-6">
-            <h2 className="font-display text-3xl sm:text-5xl font-semibold tracking-[-0.025em] leading-[1.08] text-balance text-black">
+            <h2 className="font-display text-4xl sm:text-5xl text-balance text-black">
               Saldo besar di rekening sering menipu kalau belum dipisah.
             </h2>
             <p className="text-base sm:text-lg text-[#4a4d52] leading-relaxed">
@@ -185,7 +185,7 @@ export function LandingFeatures() {
       >
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
           <div className="max-w-2xl mb-12 space-y-4">
-            <h2 className="font-display text-3xl sm:text-5xl font-semibold tracking-[-0.025em] leading-[1.08] text-black">
+            <h2 className="font-display text-4xl sm:text-5xl text-black">
               Semua keperluan kas pribadi ada di satu tempat.
             </h2>
             <p className="text-base sm:text-lg text-[#4a4d52] leading-relaxed">
@@ -268,7 +268,7 @@ export function LandingFeatures() {
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-5 space-y-5">
-            <h2 className="font-display text-3xl sm:text-4xl font-semibold tracking-[-0.025em] leading-[1.1] text-black">
+            <h2 className="font-display text-3xl sm:text-5xl text-black">
               Lihat sisa saldo Anda sebelum menekan tombol beli.
             </h2>
             <p className="text-base text-[#4a4d52] leading-relaxed">

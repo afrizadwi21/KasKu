@@ -432,7 +432,7 @@ export function KasKu3DScrollShowcase() {
         {/* Center 3D Finance Canvas + Narrative */}
         <div className="max-w-7xl w-full mx-auto px-5 sm:px-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           <div className="lg:col-span-5 space-y-5 z-10">
-            <h2 className="font-display text-3xl sm:text-5xl font-semibold tracking-[-0.025em] leading-[1.06] text-white">
+            <h2 className="font-display text-4xl sm:text-5xl text-white">
               {currentStage.title}
             </h2>
             <p className="text-sm sm:text-base text-[#bbbcbc] leading-relaxed">

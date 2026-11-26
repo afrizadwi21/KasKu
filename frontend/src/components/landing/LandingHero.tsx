@@ -51,7 +51,7 @@ export function LandingHero() {
       {/* Main Hero Thesis */}
       <div className="relative z-10 max-w-7xl w-full mx-auto px-5 sm:px-8 py-12 sm:py-20">
         <div className="max-w-3xl space-y-6 animate-reveal-up">
-          <h1 className="font-display text-4xl sm:text-6xl lg:text-[4.5rem] font-semibold tracking-[-0.03em] leading-[1.03] text-balance text-white">
+          <h1 className="font-display text-5xl sm:text-7xl lg:text-[5.25rem] text-balance text-white">
             Tahu persis uang yang boleh dipakai hari ini.
           </h1>
           <p className="text-base sm:text-xl text-[#e4e4e2] max-w-2xl leading-relaxed font-normal">
