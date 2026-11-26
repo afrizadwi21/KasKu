@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 
 interface Scroll3DFrameProps {
   children: React.ReactNode;
@@ -18,8 +18,9 @@ export function Scroll3DFrame({
   glare = true,
 }: Scroll3DFrameProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [viewportOffset, setViewportOffset] = useState(0); // -1 (below) -> 0 (center) -> +1 (above)
-  const [pointer, setPointer] = useState({ x: 0, y: 0, active: false });
+  const innerRef = useRef<HTMLDivElement | null>(null);
+  const glareRef = useRef<HTMLDivElement | null>(null);
+  const pointerRef = useRef({ x: 0, y: 0, active: false });
 
   useEffect(() => {
     const prefersReducedMotion =
@@ -27,60 +28,70 @@ export function Scroll3DFrame({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) return;
 
+    let currentOffset = 0;
+    let currentPx = 0;
+    let currentPy = 0;
     let rafId = 0;
 
-    const update = () => {
+    const dirSign = direction === "left" ? -1 : direction === "right" ? 1 : 0;
+
+    const tick = () => {
       const el = wrapperRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight || 800;
-      const elCenter = rect.top + rect.height / 2;
-      const vpCenter = vh / 2;
-      // Normalized -1.2 to +1.2 as element travels up or down the viewport
-      const norm = Math.max(-1.2, Math.min(1.2, (vpCenter - elCenter) / (vh * 0.65)));
-      setViewportOffset(norm);
+      const inner = innerRef.current;
+      if (el && inner) {
+        const rect = el.getBoundingClientRect();
+        const vh = window.innerHeight || 800;
+        const elCenter = rect.top + rect.height / 2;
+        const targetOffset = Math.max(-1.2, Math.min(1.2, (vh / 2 - elCenter) / (vh * 0.65)));
+
+        // Slow, realistic physical damping (lerp)
+        currentOffset += (targetOffset - currentOffset) * 0.055;
+
+        const targetPx = pointerRef.current.active ? pointerRef.current.x : 0;
+        const targetPy = pointerRef.current.active ? pointerRef.current.y : 0;
+        currentPx += (targetPx - currentPx) * 0.07;
+        currentPy += (targetPy - currentPy) * 0.07;
+
+        const scrollRotX = currentOffset * 12 * intensity;
+        const scrollRotY =
+          (currentOffset * 9 * dirSign + (dirSign === 0 ? currentOffset * 5 : 0)) * intensity;
+        const scrollTranslateY = -currentOffset * 22 * intensity;
+        const distFromCenter = Math.min(1, Math.abs(currentOffset));
+        const scrollScale = 1.03 - distFromCenter * 0.06 * intensity;
+
+        const finalRotX = scrollRotX - currentPy * 12;
+        const finalRotY = scrollRotY + currentPx * 14;
+
+        inner.style.transform = `translate3d(0, ${scrollTranslateY.toFixed(2)}px, 0) rotateX(${finalRotX.toFixed(2)}deg) rotateY(${finalRotY.toFixed(2)}deg) scale(${scrollScale.toFixed(4)})`;
+
+        if (glareRef.current) {
+          const glareX = pointerRef.current.active ? 50 + currentPx * 60 : 50 + currentOffset * 28;
+          const glareY = pointerRef.current.active ? 50 + currentPy * 60 : 50 - currentOffset * 28;
+          glareRef.current.style.background = `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 91, 20, 0.17), transparent 58%)`;
+          glareRef.current.style.opacity = `${(1 - distFromCenter * 0.65).toFixed(2)}`;
+        }
+      }
+      rafId = requestAnimationFrame(tick);
     };
 
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, []);
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [intensity, direction]);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = wrapperRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const nx = (e.clientX - rect.left) / rect.width - 0.5;
-    const ny = (e.clientY - rect.top) / rect.height - 0.5;
-    setPointer({ x: nx, y: ny, active: true });
+    pointerRef.current = {
+      x: (e.clientX - rect.left) / rect.width - 0.5,
+      y: (e.clientY - rect.top) / rect.height - 0.5,
+      active: true,
+    };
   };
 
   const handlePointerLeave = () => {
-    setPointer({ x: 0, y: 0, active: false });
+    pointerRef.current = { x: 0, y: 0, active: false };
   };
-
-  const dirSign = direction === "left" ? -1 : direction === "right" ? 1 : 0;
-  const scrollRotX = viewportOffset * 9 * intensity;
-  const scrollRotY = (viewportOffset * 7 * dirSign + (dirSign === 0 ? viewportOffset * 4 : 0)) * intensity;
-  const scrollTranslateY = -viewportOffset * 18 * intensity;
-  const distFromCenter = Math.min(1, Math.abs(viewportOffset));
-  const scrollScale = 1.02 - distFromCenter * 0.05 * intensity;
-
-  const finalRotX = scrollRotX - (pointer.active ? pointer.y * 12 : 0);
-  const finalRotY = scrollRotY + (pointer.active ? pointer.x * 14 : 0);
-
-  const glareX = pointer.active ? 50 + pointer.x * 60 : 50 + viewportOffset * 25;
-  const glareY = pointer.active ? 50 + pointer.y * 60 : 50 - viewportOffset * 25;
 
   return (
     <div
@@ -90,22 +101,17 @@ export function Scroll3DFrame({
       className={`[perspective:1400px] ${className}`}
     >
       <div
-        className="relative transition-transform duration-200 ease-out will-change-transform"
-        style={{
-          transform: `translate3d(0, ${scrollTranslateY}px, 0) rotateX(${finalRotX}deg) rotateY(${finalRotY}deg) scale(${scrollScale})`,
-          transformStyle: "preserve-3d",
-        }}
+        ref={innerRef}
+        className="relative will-change-transform"
+        style={{ transformStyle: "preserve-3d" }}
       >
         {children}
 
         {glare && (
           <div
+            ref={glareRef}
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300"
-            style={{
-              background: `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255, 91, 20, 0.16), transparent 58%)`,
-              opacity: 1 - distFromCenter * 0.65,
-            }}
+            className="pointer-events-none absolute inset-0 rounded-[inherit]"
           />
         )}
       </div>

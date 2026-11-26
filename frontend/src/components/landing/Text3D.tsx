@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 
 interface Text3DProps {
   as?: "h1" | "h2" | "h3";
@@ -16,7 +16,6 @@ export function Text3D({
   className = "",
 }: Text3DProps) {
   const ref = useRef<HTMLHeadingElement | null>(null);
-  const [offset, setOffset] = useState(0);
 
   useEffect(() => {
     const prefersReducedMotion =
@@ -24,37 +23,32 @@ export function Text3D({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) return;
 
+    let currentOffset = 0;
     let rafId = 0;
 
-    const update = () => {
+    const tick = () => {
       const el = ref.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight || 800;
-      const elCenter = rect.top + rect.height / 2;
-      const vpCenter = vh / 2;
-      const norm = Math.max(-1.2, Math.min(1.2, (vpCenter - elCenter) / (vh * 0.65)));
-      setOffset(norm);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const vh = window.innerHeight || 800;
+        const elCenter = rect.top + rect.height / 2;
+        const targetOffset = Math.max(-1.2, Math.min(1.2, (vh / 2 - elCenter) / (vh * 0.65)));
+
+        // Slow, realistic inertia damping on scroll up & down
+        currentOffset += (targetOffset - currentOffset) * 0.055;
+
+        const rotX = currentOffset * 20;
+        const rotY = currentOffset * -7;
+        const translateY = -currentOffset * 12;
+
+        el.style.transform = `perspective(1000px) translate3d(0, ${translateY.toFixed(2)}px, 0) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+      }
+      rafId = requestAnimationFrame(tick);
     };
 
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, []);
-
-  const rotX = offset * 22;
-  const rotY = offset * -8;
-  const translateY = -offset * 12;
 
   const textShadow =
     variant === "light"
@@ -64,11 +58,8 @@ export function Text3D({
   return (
     <Tag
       ref={ref}
-      className={`font-display transition-transform duration-150 ease-out will-change-transform ${className}`}
-      style={{
-        transform: `perspective(1000px) translate3d(0, ${translateY}px, 0) rotateX(${rotX}deg) rotateY(${rotY}deg)`,
-        textShadow,
-      }}
+      className={`font-display will-change-transform ${className}`}
+      style={{ textShadow }}
     >
       {children}
     </Tag>
