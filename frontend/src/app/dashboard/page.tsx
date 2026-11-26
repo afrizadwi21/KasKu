@@ -283,6 +283,19 @@ export default function DashboardPage() {
     };
   }, [loadAllData]);
 
+  // Auto-dismiss notifications after 2 seconds
+  useEffect(() => {
+    if (!successMsg) return;
+    const t = setTimeout(() => setSuccessMsg(""), 2000);
+    return () => clearTimeout(t);
+  }, [successMsg]);
+
+  useEffect(() => {
+    if (!errorMsg) return;
+    const t = setTimeout(() => setErrorMsg(""), 2000);
+    return () => clearTimeout(t);
+  }, [errorMsg]);
+
   const handleToggleTheme = () => {
     setIsDark((prev) => {
       const next = !prev;
@@ -865,28 +878,14 @@ export default function DashboardPage() {
 
         <main className="flex-1 min-w-0 px-4 py-6 sm:px-8 max-w-6xl w-full mx-auto">
           {errorMsg && (
-            <div className={`mb-5 flex items-center justify-between rounded-lg border px-4 py-3 text-xs ${isDark ? "border-red-500/30 bg-red-950/40 text-red-200" : "border-red-300 bg-red-50 text-red-800"}`}>
+            <div className={`mb-5 rounded-lg border px-4 py-3 text-xs ${isDark ? "border-red-500/30 bg-red-950/40 text-red-200" : "border-red-300 bg-red-50 text-red-800"}`}>
               <span>{errorMsg}</span>
-              <button
-                type="button"
-                onClick={() => setErrorMsg("")}
-                className="font-semibold underline cursor-pointer"
-              >
-                Tutup
-              </button>
             </div>
           )}
 
           {successMsg && (
-            <div className={`mb-5 flex items-center justify-between rounded-lg border border-[#10b981]/40 px-4 py-3 text-xs ${isDark ? "bg-[#10b981]/15 text-[#34d399]" : "bg-[#ecfdf5] text-[#059669]"}`}>
+            <div className={`mb-5 rounded-lg border border-[#10b981]/40 px-4 py-3 text-xs ${isDark ? "bg-[#10b981]/15 text-[#34d399]" : "bg-[#ecfdf5] text-[#059669]"}`}>
               <span>{successMsg}</span>
-              <button
-                type="button"
-                onClick={() => setSuccessMsg("")}
-                className="font-semibold underline cursor-pointer"
-              >
-                Tutup
-              </button>
             </div>
           )}
 
