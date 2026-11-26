@@ -824,6 +824,21 @@ export default function DashboardPage() {
   const cardClass = isDark
     ? "rounded-xl border border-[#f4f7f5]/10 bg-[#0e1412] text-[#f4f7f5]"
     : "rounded-xl border border-[#0b110e]/10 bg-white text-[#0b110e]";
+  const mutedCls = isDark ? "text-[#a3b8ad]" : "text-[#47544d]";
+  const borderCls = isDark ? "border-[#f4f7f5]/10" : "border-[#0b110e]/10";
+  const divideCls = isDark ? "divide-[#f4f7f5]/10" : "divide-[#0b110e]/10";
+  const subtleBgCls = isDark ? "bg-[#070a09]" : "bg-[#f7f8f7]";
+  const pillWrapCls = isDark ? "border-[#f4f7f5]/10 bg-[#0e1412]" : "border-[#0b110e]/10 bg-white";
+  const emeraldTextCls = isDark ? "text-[#34d399]" : "text-[#059669]";
+  const uploadBtnCls = isDark
+    ? "border-[#f4f7f5]/20 bg-[#121c18] text-[#f4f7f5] hover:bg-[#10b981]/20"
+    : "border-[#0b110e]/15 bg-[#eef1ef] text-[#0b110e] hover:bg-[#10b981]/20";
+  const secondaryBtnCls = isDark
+    ? "border-[#f4f7f5]/15 bg-[#121c18] text-[#f4f7f5] hover:bg-[#1a2621]"
+    : "border-[#0b110e]/15 bg-white text-[#0b110e] hover:bg-[#eef1ef]";
+  const actionBtnCls = isDark
+    ? "bg-[#10b981] text-[#070a09] hover:bg-[#34d399]"
+    : "bg-[#0b110e] text-white hover:bg-[#10b981] hover:text-[#070a09]";
 
   return (
     <div className={isDark ? "dark" : ""}>
@@ -845,7 +860,7 @@ export default function DashboardPage() {
 
         <main className="flex-1 min-w-0 px-4 py-6 sm:px-8 max-w-6xl w-full mx-auto">
           {errorMsg && (
-            <div className="mb-5 flex items-center justify-between rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-xs text-red-800 dark:border-red-500/30 dark:bg-red-950/40 dark:text-red-200">
+            <div className={`mb-5 flex items-center justify-between rounded-lg border px-4 py-3 text-xs ${isDark ? "border-red-500/30 bg-red-950/40 text-red-200" : "border-red-300 bg-red-50 text-red-800"}`}>
               <span>{errorMsg}</span>
               <button
                 type="button"
@@ -858,7 +873,7 @@ export default function DashboardPage() {
           )}
 
           {successMsg && (
-            <div className="mb-5 flex items-center justify-between rounded-lg border border-[#10b981]/40 bg-[#ecfdf5] px-4 py-3 text-xs text-[#059669] dark:bg-[#10b981]/15 dark:text-[#34d399]">
+            <div className={`mb-5 flex items-center justify-between rounded-lg border border-[#10b981]/40 px-4 py-3 text-xs ${isDark ? "bg-[#10b981]/15 text-[#34d399]" : "bg-[#ecfdf5] text-[#059669]"}`}>
               <span>{successMsg}</span>
               <button
                 type="button"
@@ -878,7 +893,7 @@ export default function DashboardPage() {
                   <h1 className="font-display text-2xl sm:text-3xl tracking-tight">
                     Ringkasan Keuangan
                   </h1>
-                  <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                  <p className={`text-xs ${mutedCls}`}>
                     Data real dari akun {user.email}
                   </p>
                 </div>
@@ -925,17 +940,17 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <div className={`lg:col-span-2 p-5 ${cardClass}`}>
-                  <div className="flex items-center justify-between border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 pb-3">
+                  <div className={`flex items-center justify-between border-b ${borderCls} pb-3`}>
                     <div>
                       <h2 className="text-sm font-semibold">Mutasi Transaksi Terbaru</h2>
-                      <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                      <p className={`text-xs ${mutedCls}`}>
                         Total {transactions.length} transaksi tercatat
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setActiveTab("transactions")}
-                      className="text-xs font-medium text-[#059669] dark:text-[#34d399] hover:underline cursor-pointer"
+                      className={`text-xs font-medium ${emeraldTextCls} hover:underline cursor-pointer`}
                     >
                       Lihat Semua
                     </button>
@@ -943,8 +958,8 @@ export default function DashboardPage() {
 
                   {transactions.length === 0 ? (
                     <div className="py-12 text-center space-y-3">
-                      <Wallet className="h-8 w-8 mx-auto text-[#47544d]/40 dark:text-[#a3b8ad]/40" />
-                      <p className="text-sm text-[#47544d] dark:text-[#a3b8ad]">
+                      <Wallet className={`h-8 w-8 mx-auto ${mutedCls} opacity-40`} />
+                      <p className={`text-sm ${mutedCls}`}>
                         Belum ada transaksi tercatat.
                       </p>
                       <button
@@ -957,7 +972,7 @@ export default function DashboardPage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="mt-3 divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
+                    <div className={`mt-3 divide-y ${divideCls}`}>
                       {transactions.slice(0, 6).map((t) => (
                         <div
                           key={t.id}
@@ -967,8 +982,8 @@ export default function DashboardPage() {
                             <div
                               className={`flex h-8 w-8 items-center justify-center rounded-lg ${
                                 t.type === "masuk"
-                                  ? "bg-[#ecfdf5] text-[#059669] dark:bg-[#10b981]/15 dark:text-[#34d399]"
-                                  : "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
+                                  ? isDark ? "bg-[#10b981]/15 text-[#34d399]" : "bg-[#ecfdf5] text-[#059669]"
+                                  : isDark ? "bg-red-950/40 text-red-400" : "bg-red-50 text-red-600"
                               }`}
                             >
                               {t.type === "masuk" ? (
@@ -981,13 +996,13 @@ export default function DashboardPage() {
                               <div className="font-medium">
                                 {t.category}
                                 {t.party && (
-                                  <span className="text-[#47544d] dark:text-[#a3b8ad]">
+                                  <span className={`${mutedCls}`}>
                                     {" "}
                                     — {t.party}
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                              <div className={`text-xs ${mutedCls}`}>
                                 {t.note || t.source || "Tanpa catatan"} · {t.date}
                               </div>
                             </div>
@@ -996,14 +1011,14 @@ export default function DashboardPage() {
                             <div
                               className={`font-semibold font-mono num-tabular ${
                                 t.type === "masuk"
-                                  ? "text-[#059669] dark:text-[#34d399]"
+                                  ? "${emeraldTextCls}"
                                   : ""
                               }`}
                             >
                               {t.type === "masuk" ? "+" : "-"}
                               {formatRupiah(t.amount)}
                             </div>
-                            <div className="text-[11px] font-mono text-[#47544d] dark:text-[#a3b8ad] num-tabular">
+                            <div className={`text-[11px] font-mono ${mutedCls} num-tabular`}>
                               Saldo: {formatRupiah(t.saldo_setelah)}
                             </div>
                           </div>
@@ -1015,18 +1030,18 @@ export default function DashboardPage() {
 
                 <div className="space-y-6">
                   <div className={`p-5 ${cardClass}`}>
-                    <div className="flex items-center justify-between border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 pb-3">
+                    <div className={`flex items-center justify-between border-b ${borderCls} pb-3`}>
                       <h2 className="text-sm font-semibold">Piutang Aktif</h2>
                       <button
                         type="button"
                         onClick={() => setActiveTab("debts")}
-                        className="text-xs font-medium text-[#059669] dark:text-[#34d399] hover:underline cursor-pointer"
+                        className={`text-xs font-medium ${emeraldTextCls} hover:underline cursor-pointer`}
                       >
                         Detail
                       </button>
                     </div>
                     {piutangList.filter((d) => d.sisa > 0).length === 0 ? (
-                      <p className="py-6 text-center text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                      <p className={`py-6 text-center text-xs ${mutedCls}`}>
                         Tidak ada piutang berjalan.
                       </p>
                     ) : (
@@ -1036,15 +1051,15 @@ export default function DashboardPage() {
                           .map((d) => (
                             <div
                               key={d.nama}
-                              className="rounded-lg border border-[#0b110e]/10 bg-[#f7f8f7] dark:border-[#f4f7f5]/10 dark:bg-[#070a09] p-3"
+                              className={`rounded-lg border ${borderCls} ${subtleBgCls} p-3`}
                             >
                               <div className="flex items-center justify-between text-xs font-medium">
                                 <span>{d.nama}</span>
-                                <span className="font-mono font-semibold text-[#059669] dark:text-[#34d399] num-tabular">
+                                <span className={`font-mono font-semibold ${emeraldTextCls} num-tabular`}>
                                   Sisa {formatRupiah(d.sisa)}
                                 </span>
                               </div>
-                              <div className="mt-2 h-1.5 w-full rounded-full bg-[#0b110e]/10 dark:bg-[#f4f7f5]/10 overflow-hidden">
+                              <div className={`mt-2 h-1.5 w-full rounded-full ${isDark ? "bg-[#f4f7f5]/10" : "bg-[#0b110e]/10"} overflow-hidden`}>
                                 <div
                                   className="h-full bg-[#10b981]"
                                   style={{ width: `${Math.min(100, d.persen)}%` }}
@@ -1057,14 +1072,14 @@ export default function DashboardPage() {
                   </div>
 
                   <div className={`p-5 ${cardClass}`}>
-                    <div className="flex items-center justify-between border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 pb-3">
+                    <div className={`flex items-center justify-between border-b ${borderCls} pb-3`}>
                       <h2 className="text-sm font-semibold">Belum Dibayar</h2>
-                      <span className="font-mono text-xs text-[#47544d] dark:text-[#a3b8ad] num-tabular">
+                      <span className={`font-mono text-xs ${mutedCls} num-tabular`}>
                         {unpaidList.length} item
                       </span>
                     </div>
                     {unpaidList.length === 0 ? (
-                      <p className="py-6 text-center text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                      <p className={`py-6 text-center text-xs ${mutedCls}`}>
                         Semua tagihan & langganan aman.
                       </p>
                     ) : (
@@ -1072,11 +1087,11 @@ export default function DashboardPage() {
                         {unpaidList.slice(0, 5).map((item, idx) => (
                           <div
                             key={`${item.jenis}-${item.nama}-${idx}`}
-                            className="flex items-center justify-between text-xs py-1.5 border-b border-[#0b110e]/5 dark:border-[#f4f7f5]/5 last:border-0"
+                            className={`flex items-center justify-between text-xs py-1.5 border-b ${borderCls} last:border-0`}
                           >
                             <div>
                               <div className="font-medium">{item.nama}</div>
-                              <div className="text-[11px] text-[#47544d] dark:text-[#a3b8ad]">
+                              <div className={`text-[11px] ${mutedCls}`}>
                                 {item.jenis} · {item.status}
                               </div>
                             </div>
@@ -1096,16 +1111,16 @@ export default function DashboardPage() {
           {/* VIEW 2: TRANSACTIONS */}
           {activeTab === "transactions" && (
             <div className={`p-5 space-y-4 ${cardClass}`}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 pb-4">
+              <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${borderCls} pb-4`}>
                 <div>
                   <h1 className="font-display text-2xl">Riwayat Transaksi</h1>
-                  <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                  <p className={`text-xs ${mutedCls}`}>
                     Total {filteredTransactions.length} transaksi ditampilkan
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
-                    <Search className="h-3.5 w-3.5 text-[#47544d] dark:text-[#a3b8ad] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <Search className={`h-3.5 w-3.5 ${mutedCls} absolute left-2.5 top-1/2 -translate-y-1/2`} />
                     <input
                       type="text"
                       placeholder="Cari kategori, pihak, catatan..."
@@ -1141,7 +1156,7 @@ export default function DashboardPage() {
               </div>
 
               {filteredTransactions.length === 0 ? (
-                <p className="py-10 text-center text-sm text-[#47544d] dark:text-[#a3b8ad]">
+                <p className={`py-10 text-center text-sm ${mutedCls}`}>
                   Tidak ada transaksi yang cocok.
                 </p>
               ) : (
@@ -1158,12 +1173,12 @@ export default function DashboardPage() {
 
                       return (
                         <div key={ym} className="space-y-2">
-                          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#f7f8f7] dark:bg-[#070a09] px-3.5 py-2 border border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+                          <div className={`flex flex-wrap items-center justify-between gap-2 rounded-lg ${subtleBgCls} px-3.5 py-2 border ${borderCls}`}>
                             <span className="font-display text-sm tracking-tight">
                               {formatMonthLabel(ym)} ({monthTxs.length})
                             </span>
                             <div className="flex items-center gap-4 text-xs font-mono num-tabular">
-                              <span className="text-[#059669] dark:text-[#34d399]">
+                              <span className={`${emeraldTextCls}`}>
                                 +{formatRupiah(monthMasuk)}
                               </span>
                               <span className="text-red-500">
@@ -1175,7 +1190,7 @@ export default function DashboardPage() {
                           <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs">
                               <thead>
-                                <tr className="border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 text-[#47544d] dark:text-[#a3b8ad]">
+                                <tr className={`border-b ${borderCls} ${mutedCls}`}>
                                   <th className="py-2 font-medium">Tanggal</th>
                                   <th className="py-2 font-medium">Kategori</th>
                                   <th className="py-2 font-medium">Pihak / Sumber</th>
@@ -1185,28 +1200,28 @@ export default function DashboardPage() {
                                   <th className="py-2 font-medium text-right">Aksi</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
+                              <tbody className={`divide-y ${divideCls}`}>
                                 {monthTxs.map((t) => (
-                                  <tr key={t.id} className="hover:bg-[#f7f8f7] dark:hover:bg-[#070a09]/50">
+                                  <tr key={t.id} className={`${isDark ? "hover:bg-[#070a09]/50" : "hover:bg-[#f7f8f7]"}`}>
                                     <td className="py-3 font-mono num-tabular">{t.date}</td>
                                     <td className="py-3 font-medium">{t.category}</td>
-                                    <td className="py-3 text-[#47544d] dark:text-[#a3b8ad]">
+                                    <td className={`py-3 ${mutedCls}`}>
                                       {t.party || t.source || "-"}
                                     </td>
-                                    <td className="py-3 text-[#47544d] dark:text-[#a3b8ad]">
+                                    <td className={`py-3 ${mutedCls}`}>
                                       {t.note || "-"}
                                     </td>
                                     <td
                                       className={`py-3 text-right font-mono font-semibold num-tabular ${
                                         t.type === "masuk"
-                                          ? "text-[#059669] dark:text-[#34d399]"
+                                          ? "${emeraldTextCls}"
                                           : ""
                                       }`}
                                     >
                                       {t.type === "masuk" ? "+" : "-"}
                                       {formatRupiah(t.amount)}
                                     </td>
-                                    <td className="py-3 text-right font-mono num-tabular text-[#47544d] dark:text-[#a3b8ad]">
+                                    <td className={`py-3 text-right font-mono num-tabular ${mutedCls}`}>
                                       {formatRupiah(t.saldo_setelah)}
                                     </td>
                                     <td className="py-3 text-right">
@@ -1214,7 +1229,7 @@ export default function DashboardPage() {
                                         type="button"
                                         onClick={() => handleDeleteTransaction(t.id)}
                                         title="Hapus transaksi"
-                                        className="p-1 text-[#47544d] hover:text-red-600 dark:text-[#a3b8ad] dark:hover:text-red-400 cursor-pointer"
+                                        className={`p-1 ${mutedCls} hover:text-red-500 cursor-pointer`}
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </button>
@@ -1251,42 +1266,42 @@ export default function DashboardPage() {
 
               {/* 2 Summary Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-[#10b981]/25 bg-[#ecfdf5] dark:bg-[#10b981]/10 p-5 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-medium text-[#059669] dark:text-[#34d399]">
+                <div className={`${isDark ? "border-[#10b981]/25 bg-[#0d1f18]" : "border-[#10b981]/25 bg-[#ecfdf5]"} rounded-xl border p-5 space-y-2`}>
+                  <div className={`flex items-center gap-2 text-xs font-medium ${emeraldTextCls}`}>
                     <ArrowDownRight className="w-4 h-4" />
                     <span>Total Piutang Aktif</span>
                   </div>
-                  <div className="font-mono text-2xl font-bold text-[#059669] dark:text-[#34d399] num-tabular">
+                  <div className={`font-mono text-2xl font-bold ${emeraldTextCls} num-tabular`}>
                     {formatRupiah(overview.piutang_total)}
                   </div>
-                  <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                  <p className={`text-xs ${mutedCls}`}>
                     Uang yang dipinjamkan ke orang lain
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-950/25 p-5 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-medium text-red-600 dark:text-red-400">
+                <div className={`${isDark ? "border-red-500/25 bg-[#1f0f12]" : "border-red-200 bg-red-50"} rounded-xl border p-5 space-y-2`}>
+                  <div className={`flex items-center gap-2 text-xs font-medium ${isDark ? "text-red-400" : "text-red-600"}`}>
                     <ArrowUpRight className="w-4 h-4" />
                     <span>Total Utang Aktif</span>
                   </div>
-                  <div className="font-mono text-2xl font-bold text-red-600 dark:text-red-400 num-tabular">
+                  <div className={`font-mono text-2xl font-bold ${isDark ? "text-red-400" : "text-red-600"} num-tabular`}>
                     {formatRupiah(overview.hutang_saya_total)}
                   </div>
-                  <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                  <p className={`text-xs ${mutedCls}`}>
                     Uang yang dipinjam dari orang lain
                   </p>
                 </div>
               </div>
 
               {/* Status Filter Pills */}
-              <div className="inline-flex rounded-lg border border-[#0b110e]/10 bg-white dark:border-[#f4f7f5]/10 dark:bg-[#0e1412] p-1 gap-1">
+              <div className={`inline-flex rounded-lg border ${pillWrapCls} p-1 gap-1`}>
                 <button
                   type="button"
                   onClick={() => setDebtStatusFilter("aktif")}
                   className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                     debtStatusFilter === "aktif"
                       ? "bg-[#10b981] text-[#070a09]"
-                      : "text-[#47544d] dark:text-[#a3b8ad]"
+                      : "${mutedCls}"
                   }`}
                 >
                   Aktif
@@ -1297,7 +1312,7 @@ export default function DashboardPage() {
                   className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                     debtStatusFilter === "lunas"
                       ? "bg-[#10b981] text-[#070a09]"
-                      : "text-[#47544d] dark:text-[#a3b8ad]"
+                      : "${mutedCls}"
                   }`}
                 >
                   Lunas
@@ -1305,14 +1320,14 @@ export default function DashboardPage() {
               </div>
 
               {/* Segmented Direction Switcher */}
-              <div className="grid grid-cols-2 rounded-xl border border-[#0b110e]/10 bg-white dark:border-[#f4f7f5]/10 dark:bg-[#0e1412] p-1 gap-1">
+              <div className={`grid grid-cols-2 rounded-xl border ${pillWrapCls} p-1 gap-1`}>
                 <button
                   type="button"
                   onClick={() => setDebtDirection("piutang")}
                   className={`rounded-lg py-2.5 px-3 text-xs font-semibold transition-colors cursor-pointer ${
                     debtDirection === "piutang"
                       ? "bg-[#10b981] text-[#070a09]"
-                      : "text-[#47544d] dark:text-[#a3b8ad]"
+                      : "${mutedCls}"
                   }`}
                 >
                   Saya Meminjamkan (Piutang)
@@ -1323,7 +1338,7 @@ export default function DashboardPage() {
                   className={`rounded-lg py-2.5 px-3 text-xs font-semibold transition-colors cursor-pointer ${
                     debtDirection === "hutang"
                       ? "bg-[#10b981] text-[#070a09]"
-                      : "text-[#47544d] dark:text-[#a3b8ad]"
+                      : "${mutedCls}"
                   }`}
                 >
                   Saya Meminjam (Utang)
@@ -1333,8 +1348,8 @@ export default function DashboardPage() {
               {/* Filtered Debts List */}
               {filteredDebts.length === 0 ? (
                 <div className={`py-14 text-center ${cardClass}`}>
-                  <Wallet className="h-8 w-8 mx-auto text-[#47544d]/40 dark:text-[#a3b8ad]/40 mb-2" />
-                  <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                  <Wallet className={`h-8 w-8 mx-auto ${mutedCls} opacity-40 mb-2`} />
+                  <p className={`text-xs ${mutedCls}`}>
                     Tidak ada data untuk filter ini.
                   </p>
                 </div>
@@ -1350,18 +1365,18 @@ export default function DashboardPage() {
                       <div key={d.nama} className={`p-5 space-y-3 ${cardClass}`}>
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-sm">{d.nama}</span>
-                          <span className="rounded-full bg-[#ecfdf5] dark:bg-[#10b981]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#059669] dark:text-[#34d399]">
+                          <span className={`rounded-full ${isDark ? "bg-[#10b981]/15" : "bg-[#ecfdf5]"} px-2.5 py-0.5 text-[11px] font-semibold ${emeraldTextCls}`}>
                             {d.status}
                           </span>
                         </div>
-                        <div className="flex justify-between text-xs text-[#47544d] dark:text-[#a3b8ad] font-mono num-tabular">
+                        <div className={`flex justify-between text-xs ${mutedCls} font-mono num-tabular`}>
                           <span>Total: {formatRupiah(d.total)}</span>
                           <span>Dibayar: {formatRupiah(d.dibayar)}</span>
-                          <span className="font-semibold text-[#0b110e] dark:text-[#f4f7f5]">
+                          <span className={`font-semibold ${isDark ? "text-[#f4f7f5]" : "text-[#0b110e]"}`}>
                             Sisa: {formatRupiah(d.sisa)}
                           </span>
                         </div>
-                        <div className="h-1.5 w-full rounded-full bg-[#eef1ef] dark:bg-[#f4f7f5]/10 overflow-hidden">
+                        <div className={`h-1.5 w-full rounded-full ${isDark ? "bg-[#f4f7f5]/10" : "bg-[#eef1ef]"} overflow-hidden`}>
                           <div
                             className="h-full bg-[#10b981]"
                             style={{ width: `${Math.min(100, d.persen)}%` }}
@@ -1387,7 +1402,7 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             onClick={() => handleToggleDebtHistory(d.nama)}
-                            className="rounded-lg border border-[#0b110e]/15 dark:border-[#f4f7f5]/15 px-3 py-1.5 text-xs font-medium hover:bg-[#eef1ef] dark:hover:bg-[#121c18] cursor-pointer"
+                            className={`rounded-lg border ${secondaryBtnCls} px-3 py-1.5 text-xs font-medium cursor-pointer`}
                           >
                             {history ? "Tutup Catatan" : "Lihat Catatan"}
                           </button>
@@ -1396,7 +1411,7 @@ export default function DashboardPage() {
                         {isPaying && (
                           <form
                             onSubmit={handleSubmitDebtPayment}
-                            className="rounded-lg border border-[#10b981]/30 bg-[#f7f8f7] dark:bg-[#070a09] p-3 space-y-2.5"
+                            className={`rounded-lg border border-[#10b981]/30 ${subtleBgCls} p-3 space-y-2.5`}
                           >
                             <div className="text-xs font-semibold">
                               Catat Pembayaran ({d.nama})
@@ -1428,12 +1443,12 @@ export default function DashboardPage() {
                         )}
 
                         {history && (
-                          <div className="rounded-lg border border-[#0b110e]/10 dark:border-[#f4f7f5]/10 bg-[#f7f8f7] dark:bg-[#070a09] p-3 space-y-2">
-                            <div className="text-[11px] font-semibold uppercase tracking-wider text-[#47544d] dark:text-[#a3b8ad]">
+                          <div className={`rounded-lg border ${borderCls} ${subtleBgCls} p-3 space-y-2`}>
+                            <div className={`text-[11px] font-semibold uppercase tracking-wider ${mutedCls}`}>
                               Riwayat & Catatan ({history.length})
                             </div>
                             {history.length === 0 ? (
-                              <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                              <p className={`text-xs ${mutedCls}`}>
                                 Belum ada riwayat transaksi.
                               </p>
                             ) : (
@@ -1441,23 +1456,23 @@ export default function DashboardPage() {
                                 {history.map((h) => (
                                   <div
                                     key={h.id}
-                                    className="flex items-start justify-between gap-2 text-xs border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 pb-1.5 last:border-0 last:pb-0"
+                                    className={`flex items-start justify-between gap-2 text-xs border-b ${borderCls} pb-1.5 last:border-0 last:pb-0`}
                                   >
                                     <div>
                                       <div className="font-medium">
                                         {h.category} ·{" "}
-                                        <span className="font-mono text-[#47544d] dark:text-[#a3b8ad]">
+                                        <span className={`font-mono ${mutedCls}`}>
                                           {h.date}
                                         </span>
                                       </div>
-                                      <div className="text-[11px] text-[#47544d] dark:text-[#a3b8ad]">
+                                      <div className={`text-[11px] ${mutedCls}`}>
                                         {h.note || "Tanpa catatan"}
                                       </div>
                                     </div>
                                     <span
                                       className={`font-mono font-semibold num-tabular ${
                                         h.type === "masuk"
-                                          ? "text-[#059669] dark:text-[#34d399]"
+                                          ? "${emeraldTextCls}"
                                           : ""
                                       }`}
                                     >
@@ -1525,14 +1540,14 @@ export default function DashboardPage() {
                   />
                   <button
                     type="submit"
-                    className="col-span-2 rounded-lg bg-[#0b110e] hover:bg-[#10b981] hover:text-[#070a09] text-white dark:bg-[#10b981] dark:text-[#070a09] dark:hover:bg-[#34d399] py-2 text-xs font-semibold transition-colors cursor-pointer"
+                    className={`col-span-2 rounded-lg ${actionBtnCls} py-2 text-xs font-semibold transition-colors cursor-pointer`}
                   >
                     + Tambah Langganan
                   </button>
                 </form>
 
                 {subscriptions.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                  <p className={`py-6 text-center text-xs ${mutedCls}`}>
                     Belum ada langganan terdaftar.
                   </p>
                 ) : (
@@ -1540,11 +1555,11 @@ export default function DashboardPage() {
                     {subscriptions.map((sub) => (
                       <div
                         key={sub.id}
-                        className="flex items-center justify-between rounded-lg border border-[#0b110e]/10 dark:border-[#f4f7f5]/10 p-3.5"
+                        className={`flex items-center justify-between rounded-lg border ${borderCls} p-3.5`}
                       >
                         <div>
                           <div className="text-sm font-semibold">{sub.name}</div>
-                          <div className="text-xs text-[#47544d] dark:text-[#a3b8ad] flex items-center gap-2 mt-0.5">
+                          <div className={`text-xs ${mutedCls} flex items-center gap-2 mt-0.5`}>
                             <Calendar className="h-3 w-3" />
                             <span>
                               {sub.cycle} · Jatuh tempo {sub.jatuh_tempo} · {sub.status}
@@ -1599,14 +1614,14 @@ export default function DashboardPage() {
                   />
                   <button
                     type="submit"
-                    className="col-span-2 rounded-lg bg-[#0b110e] hover:bg-[#10b981] hover:text-[#070a09] text-white dark:bg-[#10b981] dark:text-[#070a09] dark:hover:bg-[#34d399] py-2 text-xs font-semibold transition-colors cursor-pointer"
+                    className={`col-span-2 rounded-lg ${actionBtnCls} py-2 text-xs font-semibold transition-colors cursor-pointer`}
                   >
                     + Tambah Tagihan
                   </button>
                 </form>
 
                 {bills.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                  <p className={`py-6 text-center text-xs ${mutedCls}`}>
                     Belum ada tagihan terdaftar.
                   </p>
                 ) : (
@@ -1614,11 +1629,11 @@ export default function DashboardPage() {
                     {bills.map((bill) => (
                       <div
                         key={bill.id}
-                        className="flex items-center justify-between rounded-lg border border-[#0b110e]/10 dark:border-[#f4f7f5]/10 p-3.5"
+                        className={`flex items-center justify-between rounded-lg border ${borderCls} p-3.5`}
                       >
                         <div>
                           <div className="text-sm font-semibold">{bill.title}</div>
-                          <div className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                          <div className={`text-xs ${mutedCls}`}>
                             Jatuh tempo {bill.due_date} · {bill.status}
                           </div>
                         </div>
@@ -1635,7 +1650,7 @@ export default function DashboardPage() {
                               Bayar
                             </button>
                           ) : (
-                            <CheckCircle2 className="h-4 w-4 text-[#059669] dark:text-[#34d399]" />
+                            <CheckCircle2 className={`h-4 w-4 ${emeraldTextCls}`} />
                           )}
                         </div>
                       </div>
@@ -1689,14 +1704,14 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="inline-flex rounded-lg border border-[#0b110e]/10 bg-white dark:border-[#f4f7f5]/10 dark:bg-[#0e1412] p-1 gap-1">
+                <div className={`inline-flex rounded-lg border ${pillWrapCls} p-1 gap-1`}>
                   <button
                     type="button"
                     onClick={() => setSavingsFilter("all")}
                     className={`rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer ${
                       savingsFilter === "all"
                         ? "bg-[#10b981] text-[#070a09]"
-                        : "text-[#47544d] dark:text-[#a3b8ad]"
+                        : "${mutedCls}"
                     }`}
                   >
                     Semua Pos
@@ -1707,7 +1722,7 @@ export default function DashboardPage() {
                     className={`rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer ${
                       savingsFilter === "umum"
                         ? "bg-[#10b981] text-[#070a09]"
-                        : "text-[#47544d] dark:text-[#a3b8ad]"
+                        : "${mutedCls}"
                     }`}
                   >
                     Tabungan Umum
@@ -1718,7 +1733,7 @@ export default function DashboardPage() {
                     className={`rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer ${
                       savingsFilter === "wishlist"
                         ? "bg-[#10b981] text-[#070a09]"
-                        : "text-[#47544d] dark:text-[#a3b8ad]"
+                        : "${mutedCls}"
                     }`}
                   >
                     Tabungan Wishlist
@@ -1728,8 +1743,8 @@ export default function DashboardPage() {
 
               {filteredSavingsPots.length === 0 ? (
                 <div className={`py-12 text-center ${cardClass}`}>
-                  <PiggyBank className="h-8 w-8 mx-auto text-[#47544d]/40 dark:text-[#a3b8ad]/40 mb-2" />
-                  <p className="text-sm text-[#47544d] dark:text-[#a3b8ad]">
+                  <PiggyBank className={`h-8 w-8 mx-auto ${mutedCls} opacity-40 mb-2`} />
+                  <p className={`text-sm ${mutedCls}`}>
                     Belum ada pos tabungan untuk filter ini.
                   </p>
                 </div>
@@ -1749,11 +1764,11 @@ export default function DashboardPage() {
                           <div>
                             <h3 className="font-semibold text-base">{pot.name}</h3>
                             {pot.note && (
-                              <p className="text-xs text-[#47544d] dark:text-[#a3b8ad] mt-0.5">
+                              <p className={`text-xs ${mutedCls} mt-0.5`}>
                                 {pot.note}
                               </p>
                             )}
-                            <p className="text-xs font-mono text-[#47544d] dark:text-[#a3b8ad] num-tabular mt-1">
+                            <p className={`text-xs font-mono ${mutedCls} num-tabular mt-1`}>
                               {formatRupiah(saldo)}
                               {target > 0 ? ` / ${formatRupiah(target)} (${pct}%)` : ""}
                             </p>
@@ -1761,14 +1776,14 @@ export default function DashboardPage() {
                           <span
                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
                               isWishPot
-                                ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                                : "bg-[#ecfdf5] text-[#059669] dark:bg-[#10b981]/15 dark:text-[#34d399]"
+                                ? isDark ? "bg-amber-950/40 text-amber-300" : "bg-amber-50 text-amber-700"
+                                : isDark ? "bg-[#10b981]/15 text-[#34d399]" : "bg-[#ecfdf5] text-[#059669]"
                             }`}
                           >
                             {isWishPot ? "Tabungan Wishlist" : "Tabungan Umum"}
                           </span>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-[#eef1ef] dark:bg-[#f4f7f5]/10 overflow-hidden">
+                        <div className={`h-2 w-full rounded-full ${isDark ? "bg-[#f4f7f5]/10" : "bg-[#eef1ef]"} overflow-hidden`}>
                           <div
                             className="h-full bg-[#10b981]"
                             style={{ width: `${pct}%` }}
@@ -1799,7 +1814,7 @@ export default function DashboardPage() {
                             <button
                               type="button"
                               onClick={() => handleSavingsAction(pot.id, "withdraw")}
-                              className="rounded-lg border border-[#0b110e]/15 dark:border-[#f4f7f5]/15 px-3 py-1.5 text-xs font-medium hover:bg-[#eef1ef] dark:hover:bg-[#121c18] cursor-pointer"
+                              className={`rounded-lg border ${secondaryBtnCls} px-3 py-1.5 text-xs font-medium cursor-pointer`}
                             >
                               Tarik
                             </button>
@@ -1828,11 +1843,11 @@ export default function DashboardPage() {
                   Catatan Mutasi Tabungan ({savingsMovements.length})
                 </h3>
                 {savingsMovements.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                  <p className={`py-6 text-center text-xs ${mutedCls}`}>
                     Belum ada catatan setor atau tarik tabungan.
                   </p>
                 ) : (
-                  <div className="divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
+                  <div className={`divide-y ${divideCls}`}>
                     {savingsMovements.map((m) => (
                       <div
                         key={m.id}
@@ -1841,11 +1856,11 @@ export default function DashboardPage() {
                         <div>
                           <div className="font-semibold">
                             {m.pot_name} ·{" "}
-                            <span className="uppercase font-mono text-[#059669] dark:text-[#34d399]">
+                            <span className={`uppercase font-mono ${emeraldTextCls}`}>
                               {m.type}
                             </span>
                           </div>
-                          <div className="text-[#47544d] dark:text-[#a3b8ad]">
+                          <div className={`${mutedCls}`}>
                             {m.note || "Tanpa catatan"} ·{" "}
                             <span className="font-mono">{m.date}</span>
                           </div>
@@ -1853,7 +1868,7 @@ export default function DashboardPage() {
                         <span
                           className={`font-mono font-semibold num-tabular ${
                             m.type === "setor"
-                              ? "text-[#059669] dark:text-[#34d399]"
+                              ? "${emeraldTextCls}"
                               : ""
                           }`}
                         >
@@ -1876,7 +1891,7 @@ export default function DashboardPage() {
 
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
-                    <Link2 className="h-3.5 w-3.5 text-[#47544d] dark:text-[#a3b8ad] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Link2 className={`h-3.5 w-3.5 ${mutedCls} absolute left-3 top-1/2 -translate-y-1/2`} />
                     <input
                       type="url"
                       placeholder="Tempel link produk (Shopee, Tokopedia, dll)..."
@@ -1889,7 +1904,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={handleFetchWishlistLink}
                     disabled={fetchingLink}
-                    className="rounded-lg bg-[#0b110e] hover:bg-[#10b981] hover:text-[#070a09] disabled:opacity-60 text-white dark:bg-[#10b981] dark:text-[#070a09] dark:hover:bg-[#34d399] px-4 py-2 text-xs font-semibold transition-colors cursor-pointer"
+                    className={`rounded-lg ${actionBtnCls} disabled:opacity-60 px-4 py-2 text-xs font-semibold transition-colors cursor-pointer`}
                   >
                     {fetchingLink ? "Mengambil..." : "Ambil Data dari Link"}
                   </button>
@@ -1950,7 +1965,7 @@ export default function DashboardPage() {
                       }}
                       className={`flex-1 ${inputClass}`}
                     />
-                    <label className="inline-flex items-center gap-1.5 rounded-lg border border-[#0b110e]/15 dark:border-[#f4f7f5]/15 bg-[#eef1ef] dark:bg-[#070a09] px-3 py-2 text-xs font-medium hover:bg-[#10b981]/20 cursor-pointer shrink-0">
+                    <label className={`inline-flex items-center gap-1.5 rounded-lg border ${uploadBtnCls} px-3 py-2 text-xs font-medium cursor-pointer shrink-0`}>
                       <ImagePlus className="h-3.5 w-3.5" />
                       <span>{uploadingImage ? "Mengunggah..." : "Upload Foto"}</span>
                       <input
@@ -1984,11 +1999,11 @@ export default function DashboardPage() {
                         src={wishPreviewURL}
                         alt="Preview produk"
                         onError={() => setWishPreviewBroken(true)}
-                        className="h-10 w-10 rounded-lg object-cover border border-[#0b110e]/15 dark:border-[#f4f7f5]/15"
+                        className={`h-10 w-10 rounded-lg object-cover border ${borderCls}`}
                       />
                     )}
                     {wishPreviewURL && wishPreviewBroken && (
-                      <span className="text-[11px] text-[#47544d] dark:text-[#a3b8ad]">
+                      <span className={`text-[11px] ${mutedCls}`}>
                         Foto tidak dapat dipratinjau (opsional).
                       </span>
                     )}
@@ -2006,7 +2021,7 @@ export default function DashboardPage() {
               {/* Search & Priority Filters for Wishlist */}
               <div className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${cardClass}`}>
                 <div className="relative flex-1">
-                  <Search className="h-3.5 w-3.5 text-[#47544d] dark:text-[#a3b8ad] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className={`h-3.5 w-3.5 ${mutedCls} absolute left-3 top-1/2 -translate-y-1/2`} />
                   <input
                     type="text"
                     placeholder="Cari barang wishlist, catatan, situs..."
@@ -2048,8 +2063,8 @@ export default function DashboardPage() {
 
               {filteredWishlistItems.length === 0 ? (
                 <div className={`py-12 text-center ${cardClass}`}>
-                  <ShoppingBag className="h-8 w-8 mx-auto text-[#47544d]/40 dark:text-[#a3b8ad]/40 mb-2" />
-                  <p className="text-sm text-[#47544d] dark:text-[#a3b8ad]">
+                  <ShoppingBag className={`h-8 w-8 mx-auto ${mutedCls} opacity-40 mb-2`} />
+                  <p className={`text-sm ${mutedCls}`}>
                     Belum ada item wishlist yang cocok.
                   </p>
                 </div>
@@ -2069,7 +2084,7 @@ export default function DashboardPage() {
                         className={`overflow-hidden flex flex-col justify-between ${cardClass}`}
                       >
                         {hasPhoto && (
-                          <div className="aspect-[16/10] w-full bg-[#eef1ef] dark:bg-[#070a09] overflow-hidden border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+                          <div className={`aspect-[16/10] w-full ${subtleBgCls} overflow-hidden border-b ${borderCls}`}>
                             <img
                               src={item.foto_url as string}
                               alt={item.name}
@@ -2087,10 +2102,10 @@ export default function DashboardPage() {
                         <div className="p-5 flex-1 flex flex-col justify-between gap-4">
                           <div>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs uppercase font-mono text-[#059669] dark:text-[#34d399]">
+                              <span className={`text-xs uppercase font-mono ${emeraldTextCls}`}>
                                 {item.priority}
                               </span>
-                              <span className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                              <span className={`text-xs ${mutedCls}`}>
                                 {item.status}
                               </span>
                             </div>
@@ -2101,7 +2116,7 @@ export default function DashboardPage() {
                               {formatRupiah(item.price)}
                             </p>
                             {item.note && (
-                              <p className="mt-1 text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                              <p className={`mt-1 text-xs ${mutedCls}`}>
                                 {item.note}
                               </p>
                             )}
@@ -2110,7 +2125,7 @@ export default function DashboardPage() {
                                 href={item.link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#059669] dark:text-[#34d399] hover:underline"
+                                className={`mt-2 inline-flex items-center gap-1 text-xs font-medium ${emeraldTextCls} hover:underline`}
                               >
                                 <span>{item.situs || "Buka Link Produk"}</span>
                                 <ExternalLink className="h-3 w-3" />
@@ -2119,22 +2134,22 @@ export default function DashboardPage() {
 
                             {/* Linked Tabungan Wishlist */}
                             {item.saving_pot_id && item.status === "aktif" && (
-                              <div className="mt-3 rounded-lg border border-[#10b981]/25 bg-[#f7f8f7] dark:bg-[#070a09] p-3 space-y-2">
+                              <div className={`mt-3 rounded-lg border border-[#10b981]/25 ${subtleBgCls} p-3 space-y-2`}>
                                 <div className="flex items-center justify-between text-[11px]">
-                                  <span className="font-semibold text-[#059669] dark:text-[#34d399]">
+                                  <span className={`font-semibold ${emeraldTextCls}`}>
                                     Tabungan Wishlist: {item.saving_pot_name}
                                   </span>
                                   <span className="font-mono num-tabular">
                                     {wishPct}%
                                   </span>
                                 </div>
-                                <div className="h-1.5 w-full rounded-full bg-[#0b110e]/10 dark:bg-[#f4f7f5]/10 overflow-hidden">
+                                <div className={`h-1.5 w-full rounded-full ${isDark ? "bg-[#f4f7f5]/10" : "bg-[#0b110e]/10"} overflow-hidden`}>
                                   <div
                                     className="h-full bg-[#10b981]"
                                     style={{ width: `${wishPct}%` }}
                                   />
                                 </div>
-                                <div className="text-[11px] font-mono text-[#47544d] dark:text-[#a3b8ad] num-tabular">
+                                <div className={`text-[11px] font-mono ${mutedCls} num-tabular`}>
                                   Terkumpul: {formatRupiah(saldoPos)}
                                 </div>
                                 <div className="flex items-center gap-1.5">
@@ -2168,7 +2183,7 @@ export default function DashboardPage() {
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#0b110e]/10 dark:border-[#f4f7f5]/10">
+                          <div className={`flex items-center justify-between gap-2 pt-3 border-t ${borderCls}`}>
                             {item.status === "aktif" ? (
                               <div className="flex-1 flex flex-wrap gap-1.5">
                                 <button
@@ -2182,14 +2197,14 @@ export default function DashboardPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleBuyWishlist(item.id, "pos")}
-                                    className="rounded-lg border border-[#10b981] py-1.5 px-2 text-[11px] font-semibold text-[#059669] dark:text-[#34d399] hover:bg-[#10b981]/10 cursor-pointer"
+                                    className={`rounded-lg border border-[#10b981] py-1.5 px-2 text-[11px] font-semibold ${emeraldTextCls} hover:bg-[#10b981]/10 cursor-pointer`}
                                   >
                                     Pakai Pos
                                   </button>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-xs font-medium text-[#059669] dark:text-[#34d399]">
+                              <span className={`text-xs font-medium ${emeraldTextCls}`}>
                                 Sudah Dibeli
                               </span>
                             )}
@@ -2197,7 +2212,7 @@ export default function DashboardPage() {
                               type="button"
                               onClick={() => handleDeleteWishlist(item.id)}
                               title="Hapus wishlist"
-                              className="p-1.5 text-[#47544d] hover:text-red-600 dark:text-[#a3b8ad] dark:hover:text-red-400 cursor-pointer"
+                              className={`p-1.5 ${mutedCls} hover:text-red-500 cursor-pointer`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -2270,7 +2285,7 @@ export default function DashboardPage() {
                     <h1 className="font-display text-2xl sm:text-3xl">
                       Profil & Analitik Keuangan
                     </h1>
-                    <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                    <p className={`text-xs ${mutedCls}`}>
                       Kelola profil akun dan pantau tren pemasukan & pengeluaran Anda.
                     </p>
                   </div>
@@ -2292,12 +2307,12 @@ export default function DashboardPage() {
                 <div className={`p-5 ${cardClass}`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#10b981]/15 border border-[#10b981]/40 text-lg font-bold text-[#059669] dark:text-[#34d399]">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-[#10b981]/15 border border-[#10b981]/40 text-lg font-bold ${emeraldTextCls}`}>
                         {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                       </div>
                       <div>
                         <div className="font-semibold text-base">{user.name}</div>
-                        <div className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                        <div className={`text-xs ${mutedCls}`}>
                           {user.email}
                         </div>
                       </div>
@@ -2358,7 +2373,7 @@ export default function DashboardPage() {
                       <h2 className="font-display text-lg">
                         Chart Pemasukan & Pengeluaran ({analyticsYear})
                       </h2>
-                      <p className="text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                      <p className={`text-xs ${mutedCls}`}>
                         Perbandingan arus kas masuk dan keluar tiap bulan
                       </p>
                     </div>
@@ -2375,7 +2390,7 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="pt-2">
-                    <div className="h-56 flex items-end gap-2 sm:gap-3 border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 pb-2">
+                    <div className={`h-56 flex items-end gap-2 sm:gap-3 border-b ${borderCls} pb-2`}>
                       {monthsData.map((m, idx) => {
                         const masukPct = Math.round((m.masuk / maxMonthVal) * 100);
                         const keluarPct = Math.round((m.keluar / maxMonthVal) * 100);
@@ -2409,7 +2424,7 @@ export default function DashboardPage() {
                       {MONTH_NAMES.map((name) => (
                         <div
                           key={name}
-                          className="flex-1 text-center text-[10px] sm:text-xs font-mono text-[#47544d] dark:text-[#a3b8ad]"
+                          className={`flex-1 text-center text-[10px] sm:text-xs font-mono ${mutedCls}`}
                         >
                           {name}
                         </div>
@@ -2427,14 +2442,14 @@ export default function DashboardPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
-                          <tr className="border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 text-[#47544d] dark:text-[#a3b8ad]">
+                          <tr className={`border-b ${borderCls} ${mutedCls}`}>
                             <th className="py-2 font-medium">Bulan</th>
                             <th className="py-2 font-medium text-right">Masuk</th>
                             <th className="py-2 font-medium text-right">Keluar</th>
                             <th className="py-2 font-medium text-right">Tren Keluar</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
+                        <tbody className={`divide-y ${divideCls}`}>
                           {monthsData.map((m, idx) => {
                             if (m.masuk === 0 && m.keluar === 0) return null;
                             const prevKeluar = idx > 0 ? monthsData[idx - 1].keluar : 0;
@@ -2445,7 +2460,7 @@ export default function DashboardPage() {
                             return (
                               <tr key={MONTH_NAMES[idx]}>
                                 <td className="py-2.5 font-medium">{MONTH_NAMES[idx]}</td>
-                                <td className="py-2.5 text-right font-mono text-[#059669] dark:text-[#34d399] num-tabular">
+                                <td className={`py-2.5 text-right font-mono ${emeraldTextCls} num-tabular`}>
                                   {formatRupiah(m.masuk)}
                                 </td>
                                 <td className="py-2.5 text-right font-mono num-tabular">
@@ -2453,9 +2468,9 @@ export default function DashboardPage() {
                                 </td>
                                 <td className="py-2.5 text-right font-mono text-[11px] num-tabular">
                                   {diffPct === null ? (
-                                    <span className="text-[#47544d] dark:text-[#a3b8ad]">—</span>
+                                    <span className={`${mutedCls}`}>—</span>
                                   ) : (
-                                    <span className={diffPct > 0 ? "text-red-500" : "text-[#059669] dark:text-[#34d399]"}>
+                                    <span className={diffPct > 0 ? "text-red-500" : "${emeraldTextCls}"}>
                                       {diffPct > 0 ? `+${diffPct}%` : `${diffPct}%`}
                                     </span>
                                   )}
@@ -2465,7 +2480,7 @@ export default function DashboardPage() {
                           })}
                           {monthsData.every((m) => m.masuk === 0 && m.keluar === 0) && (
                             <tr>
-                              <td colSpan={4} className="py-6 text-center text-[#47544d] dark:text-[#a3b8ad]">
+                              <td colSpan={4} className={`py-6 text-center ${mutedCls}`}>
                                 Belum ada transaksi pada tahun {analyticsYear}.
                               </td>
                             </tr>
@@ -2484,27 +2499,27 @@ export default function DashboardPage() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs">
                           <thead>
-                            <tr className="border-b border-[#0b110e]/10 dark:border-[#f4f7f5]/10 text-[#47544d] dark:text-[#a3b8ad]">
+                            <tr className={`border-b ${borderCls} ${mutedCls}`}>
                               <th className="py-2 font-medium">Tahun</th>
                               <th className="py-2 font-medium text-right">Pemasukan</th>
                               <th className="py-2 font-medium text-right">Pengeluaran</th>
                               <th className="py-2 font-medium text-right">Bersih</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#0b110e]/10 dark:divide-[#f4f7f5]/10">
+                          <tbody className={`divide-y ${divideCls}`}>
                             {availableYears.map((yr) => {
                               const tot = yearlyMap[yr] || { masuk: 0, keluar: 0 };
                               const net = tot.masuk - tot.keluar;
                               return (
                                 <tr key={yr}>
                                   <td className="py-2.5 font-mono font-semibold">{yr}</td>
-                                  <td className="py-2.5 text-right font-mono text-[#059669] dark:text-[#34d399] num-tabular">
+                                  <td className={`py-2.5 text-right font-mono ${emeraldTextCls} num-tabular`}>
                                     {formatRupiah(tot.masuk)}
                                   </td>
                                   <td className="py-2.5 text-right font-mono num-tabular">
                                     {formatRupiah(tot.keluar)}
                                   </td>
-                                  <td className={`py-2.5 text-right font-mono font-semibold num-tabular ${net >= 0 ? "text-[#059669] dark:text-[#34d399]" : "text-red-500"}`}>
+                                  <td className={`py-2.5 text-right font-mono font-semibold num-tabular ${net >= 0 ? "${emeraldTextCls}" : "text-red-500"}`}>
                                     {net >= 0 ? "+" : ""}
                                     {formatRupiah(net)}
                                   </td>
@@ -2521,7 +2536,7 @@ export default function DashboardPage() {
                         Kategori Pengeluaran Terbesar ({analyticsYear})
                       </h2>
                       {topCategories.length === 0 ? (
-                        <p className="py-4 text-center text-xs text-[#47544d] dark:text-[#a3b8ad]">
+                        <p className={`py-4 text-center text-xs ${mutedCls}`}>
                           Belum ada pengeluaran pada tahun {analyticsYear}.
                         </p>
                       ) : (
@@ -2534,7 +2549,7 @@ export default function DashboardPage() {
                                   {formatRupiah(total)}
                                 </span>
                               </div>
-                              <div className="h-1.5 w-full rounded-full bg-[#eef1ef] dark:bg-[#f4f7f5]/10 overflow-hidden">
+                              <div className={`h-1.5 w-full rounded-full ${isDark ? "bg-[#f4f7f5]/10" : "bg-[#eef1ef]"} overflow-hidden`}>
                                 <div
                                   className="h-full bg-[#10b981]"
                                   style={{ width: `${Math.round((total / maxCatVal) * 100)}%` }}
