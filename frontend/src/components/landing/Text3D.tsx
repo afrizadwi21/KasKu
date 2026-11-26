@@ -52,9 +52,9 @@ export function Text3D({
     };
   }, []);
 
-  const rotX = offset * 11;
-  const rotY = offset * -5;
-  const translateY = -offset * 8;
+  const rotX = offset * 22;
+  const rotY = offset * -8;
+  const translateY = -offset * 12;
 
   const textShadow =
     variant === "light"
