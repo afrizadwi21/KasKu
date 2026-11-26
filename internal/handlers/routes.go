@@ -14,6 +14,9 @@ func (h *Handler) RegisterRoutes(app *fiber.App) {
 	// Health check (publik, tanpa otentikasi)
 	app.Get("/healthz", h.Healthz)
 
+	// Publik Gambar Bertanda Tangan (tanpa Header Authorization)
+	app.Get("/img/wishlist/:image_id", h.GetSignedWishlistImage)
+
 	// Auth Group (publik, tanpa otentikasi)
 	authGroup := app.Group("/auth")
 	authGroup.Post("/register", h.Register)
@@ -86,6 +89,10 @@ func (h *Handler) RegisterRoutes(app *fiber.App) {
 	// 8. Wishlist & Simulasi Beli
 	api.Get("/wishlist", h.GetWishlist)
 	api.Post("/wishlist", h.CreateWishlistItem)
+	api.Post("/wishlist/fetch-link", h.FetchLinkMetadata)
+	api.Post("/wishlist/images", h.UploadWishlistImage)
+	api.Post("/wishlist/images/from-url", h.UploadWishlistImageFromURL)
+	api.Delete("/wishlist/images/:image_id", h.DeleteWishlistImage)
 	api.Post("/wishlist/preview", h.PreviewWishlistCustom)
 	api.Get("/wishlist/plan", h.GetWishlistPlan)
 	api.Get("/wishlist/:id", h.GetWishlistItemByID)

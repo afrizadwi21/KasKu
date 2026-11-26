@@ -698,6 +698,49 @@ curl -X POST http://localhost:8080/api/wishlist/<WISHLIST_ID>/buy \
   }'
 ```
 
+#### Ambil Metadata Otomatis dari Link Produk (`POST /api/wishlist/fetch-link`)
+> Mencoba mengekstrak nama, harga, dan foto dari link e-commerce (Shopee, Tokopedia, Lazada, dll). Jika marketplace memblokir bot / JavaScript-only (seperti Shopee), API mengembalikan `ok: false` dengan pesan ramah agar pengguna dapat mengisi formulir secara manual.
+```bash
+curl -X POST http://localhost:8080/api/wishlist/fetch-link \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "url": "https://www.tokopedia.com/audio/headset-gaming"
+  }'
+```
+
+#### Unggah Foto Wishlist Manual (`POST /api/wishlist/images`)
+> Mengunggah file gambar (JPEG/PNG/WebP, maks 5 MB). Gambar otomatis diperkecil ke resolusi maksimal 800px dan EXIF metadata dibuang demi privasi dan efisiensi penyimpanan database PostgreSQL.
+```bash
+curl -X POST http://localhost:8080/api/wishlist/images \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -F "file=@/path/to/gambar_produk.jpg"
+```
+
+#### Simpan Foto dari URL Kandidat (`POST /api/wishlist/images/from-url`)
+> Server mengunduh foto dari URL kandidat (hasil `fetch-link`), memprosesnya, dan menyimpannya secara aman dengan proteksi anti-SSRF.
+```bash
+curl -X POST http://localhost:8080/api/wishlist/images/from-url \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{
+    "url": "https://images.tokopedia.net/img/dummy.jpg"
+  }'
+```
+
+#### Akses Foto Publik Bertanda Tangan (`GET /img/wishlist/:image_id?exp=&sig=`)
+> Dapat langsung disematkan pada tag `<img src="...">` di frontend tanpa header Authorization. Signature berlaku selama 1 jam.
+```bash
+curl -X GET "http://localhost:8080/img/wishlist/<IMAGE_ID>?exp=1700000000&sig=abcdef123456..." \
+  -o foto_wishlist.jpg
+```
+
+#### Hapus Foto Wishlist (`DELETE /api/wishlist/images/:image_id`)
+```bash
+curl -X DELETE http://localhost:8080/api/wishlist/images/<IMAGE_ID> \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
 #### Batalkan Pembelian Wishlist (`POST /api/wishlist/:id/undo-buy`)
 ```bash
 curl -X POST http://localhost:8080/api/wishlist/<WISHLIST_ID>/undo-buy \

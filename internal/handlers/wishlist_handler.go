@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,31 +12,38 @@ import (
 	"github.com/google/uuid"
 
 	"kasku-backend/internal/calc"
+	"kasku-backend/internal/media"
 	"kasku-backend/internal/middleware"
 )
 
 // WishlistItemResponse model respons data wishlist
 type WishlistItemResponse struct {
-	ID                   string  `json:"id"`
-	Name                 string  `json:"name"`
-	Price                int64   `json:"price"`
-	Priority             string  `json:"priority"`
-	Category             string  `json:"category"`
-	Link                 string  `json:"link"`
-	Note                 string  `json:"note"`
-	TargetDate           *string `json:"target_date"`
-	SisaHari             *int    `json:"sisa_hari"`
-	Status               string  `json:"status"`
-	SavingPotID          *string `json:"saving_pot_id"`
-	SavingPotName        *string `json:"saving_pot_name,omitempty"`
-	SaldoPos             *int64  `json:"saldo_pos,omitempty"`
+	ID                   string   `json:"id"`
+	Name                 string   `json:"name"`
+	Price                int64    `json:"price"`
+	Priority             string   `json:"priority"`
+	Category             string   `json:"category"`
+	Link                 string   `json:"link"`
+	LinkAkhir            string   `json:"link_akhir"`
+	Situs                string   `json:"situs"`
+	PriceSource          string   `json:"price_source"`
+	ImageID              *string  `json:"image_id"`
+	FotoURL              *string  `json:"foto_url"`
+	FotoThumbURL         *string  `json:"foto_thumb_url"`
+	Note                 string   `json:"note"`
+	TargetDate           *string  `json:"target_date"`
+	SisaHari             *int     `json:"sisa_hari"`
+	Status               string   `json:"status"`
+	SavingPotID          *string  `json:"saving_pot_id"`
+	SavingPotName        *string  `json:"saving_pot_name,omitempty"`
+	SaldoPos             *int64   `json:"saldo_pos,omitempty"`
 	PersenTerkumpul      *float64 `json:"persen_terkumpul,omitempty"`
-	BisaDibeliSekarang   bool    `json:"bisa_dibeli_sekarang"`
-	KurangBerapa         int64   `json:"kurang_berapa"`
-	SaldoBebasJikaDibeli int64   `json:"saldo_bebas_jika_dibeli"`
-	BoughtAt             *string `json:"bought_at"`
-	BoughtTransactionID  *string `json:"bought_transaction_id"`
-	CreatedAt            string  `json:"created_at"`
+	BisaDibeliSekarang   bool     `json:"bisa_dibeli_sekarang"`
+	KurangBerapa         int64    `json:"kurang_berapa"`
+	SaldoBebasJikaDibeli int64    `json:"saldo_bebas_jika_dibeli"`
+	BoughtAt             *string  `json:"bought_at"`
+	BoughtTransactionID  *string  `json:"bought_transaction_id"`
+	CreatedAt            string   `json:"created_at"`
 }
 
 // Helper untuk menghitung total kewajiban jatuh tempo dalam 7 hari ke depan
@@ -123,7 +131,8 @@ func (h *Handler) GetWishlist(c *fiber.Ctx) error {
 
 	query := fmt.Sprintf(`
 		SELECT 
-			w.id, w.name, w.price, w.priority, w.category, w.link, w.note, w.target_date, 
+			w.id, w.name, w.price, w.priority, w.category, w.link, w.link_resolved, w.source_site, w.price_source,
+			w.image_id, w.note, w.target_date, 
 			w.status, w.saving_pot_id, sp.name AS saving_pot_name,
 			COALESCE(
 				(SELECT SUM(CASE WHEN sm.type = 'setor' THEN sm.amount ELSE -sm.amount END)
@@ -151,16 +160,22 @@ func (h *Handler) GetWishlist(c *fiber.Ctx) error {
 	var jumlahAktif int
 	var jumlahBisaDibeliSekarang int
 
+	baseURL := c.BaseURL()
+	jwtSecret := ""
+	if h.Config != nil {
+		jwtSecret = h.Config.JWTSecret
+	}
+
 	for rows.Next() {
 		var it WishlistItemResponse
 		var targetDate, boughtAt sql.NullTime
-		var savingPotID, savingPotName, boughtTxID sql.NullString
+		var savingPotID, savingPotName, boughtTxID, imageID sql.NullString
 		var saldoPos sql.NullInt64
 		var createdAt time.Time
 
 		err := rows.Scan(
-			&it.ID, &it.Name, &it.Price, &it.Priority, &it.Category, &it.Link, &it.Note,
-			&targetDate, &it.Status, &savingPotID, &savingPotName, &saldoPos,
+			&it.ID, &it.Name, &it.Price, &it.Priority, &it.Category, &it.Link, &it.LinkAkhir, &it.Situs, &it.PriceSource,
+			&imageID, &it.Note, &targetDate, &it.Status, &savingPotID, &savingPotName, &saldoPos,
 			&boughtAt, &boughtTxID, &createdAt,
 		)
 		if err != nil {
@@ -181,6 +196,18 @@ func (h *Handler) GetWishlist(c *fiber.Ctx) error {
 		}
 		if boughtTxID.Valid {
 			it.BoughtTransactionID = &boughtTxID.String
+		}
+
+		if imageID.Valid && imageID.String != "" {
+			imgID := imageID.String
+			it.ImageID = &imgID
+			fURL := media.GenerateSignedImageURL(baseURL, imgID, jwtSecret, 1*time.Hour)
+			it.FotoURL = &fURL
+			it.FotoThumbURL = &fURL // Sisi terpanjang 800px responsif / URL bertanda tangan
+		}
+
+		if it.Situs == "" && it.Link != "" {
+			it.Situs = media.DetectSite(it.Link)
 		}
 
 		if savingPotID.Valid {
@@ -238,6 +265,9 @@ func (h *Handler) CreateWishlistItem(c *fiber.Ctx) error {
 		Priority    *string `json:"priority"`
 		Category    *string `json:"category"`
 		Link        *string `json:"link"`
+		ImageID     *string `json:"image_id"`
+		ImageURL    *string `json:"image_url"`
+		PriceSource *string `json:"price_source"`
 		Note        *string `json:"note"`
 		TargetDate  *string `json:"target_date"`
 		SavingPotID *string `json:"saving_pot_id"`
@@ -308,12 +338,56 @@ func (h *Handler) CreateWishlistItem(c *fiber.Ctx) error {
 		savingPotIDVal = &potID
 	}
 
+	// Deteksi situs dan resolved link
+	sourceSite := ""
+	if link != "" {
+		sourceSite = media.DetectSite(link)
+	}
+
+	priceSource := "manual"
+	if input.PriceSource != nil && strings.TrimSpace(*input.PriceSource) == "link" {
+		priceSource = "link"
+	}
+
+	// Image ID handling: dari input.ImageID atau unduh dari input.ImageURL
+	var finalImageID *string
+	if input.ImageID != nil && strings.TrimSpace(*input.ImageID) != "" {
+		imgID := strings.TrimSpace(*input.ImageID)
+		if _, err := uuid.Parse(imgID); err != nil {
+			return ErrorResponse(c, fiber.StatusBadRequest, "Format image_id tidak valid")
+		}
+		var imgExists bool
+		_ = h.DB.QueryRow("SELECT true FROM wishlist_images WHERE id = $1 AND user_id = $2", imgID, userID).Scan(&imgExists)
+		if !imgExists {
+			return ErrorResponse(c, fiber.StatusNotFound, "Foto tidak ditemukan atau bukan milik akun Anda")
+		}
+		finalImageID = &imgID
+	} else if input.ImageURL != nil && strings.TrimSpace(*input.ImageURL) != "" {
+		imgURL := strings.TrimSpace(*input.ImageURL)
+		parsedImgURL, err := media.ValidateURLFormat(imgURL)
+		if err == nil {
+			client := media.NewSSRFSafeHTTPClient(8*time.Second, false)
+			req, err := http.NewRequestWithContext(context.Background(), "GET", parsedImgURL.String(), nil)
+			if err == nil {
+				req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+				if resp, err := client.Do(req); err == nil && resp.StatusCode == http.StatusOK {
+					defer resp.Body.Close()
+					if processed, err := media.ProcessAndResizeImage(resp.Body, 800); err == nil {
+						if newImgID, err := h.saveWishlistImage(context.Background(), userID, processed); err == nil {
+							finalImageID = &newImgID
+						}
+					}
+				}
+			}
+		}
+	}
+
 	newID := uuid.New().String()
 	_, err := h.DB.Exec(`
 		INSERT INTO wishlist_items (
-			id, user_id, name, price, priority, category, link, note, target_date, status, saving_pot_id, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'aktif', $10, now())
-	`, newID, userID, name, input.Price, priority, category, link, note, targetDateVal, savingPotIDVal)
+			id, user_id, name, price, priority, category, link, source_site, link_resolved, price_source, image_id, note, target_date, status, saving_pot_id, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $7, $9, $10, $11, $12, 'aktif', $13, now())
+	`, newID, userID, name, input.Price, priority, category, link, sourceSite, priceSource, finalImageID, note, targetDateVal, savingPotIDVal)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menambahkan item wishlist: "+err.Error())
 	}
@@ -340,13 +414,14 @@ func (h *Handler) GetWishlistItemByID(c *fiber.Ctx) error {
 
 	var it WishlistItemResponse
 	var targetDate, boughtAt sql.NullTime
-	var savingPotID, savingPotName, boughtTxID sql.NullString
+	var savingPotID, savingPotName, boughtTxID, imageID sql.NullString
 	var saldoPos sql.NullInt64
 	var createdAt time.Time
 
 	err = h.DB.QueryRowContext(ctx, `
 		SELECT 
-			w.id, w.name, w.price, w.priority, w.category, w.link, w.note, w.target_date, 
+			w.id, w.name, w.price, w.priority, w.category, w.link, w.link_resolved, w.source_site, w.price_source,
+			w.image_id, w.note, w.target_date, 
 			w.status, w.saving_pot_id, sp.name AS saving_pot_name,
 			COALESCE(
 				(SELECT SUM(CASE WHEN sm.type = 'setor' THEN sm.amount ELSE -sm.amount END)
@@ -357,8 +432,8 @@ func (h *Handler) GetWishlistItemByID(c *fiber.Ctx) error {
 		LEFT JOIN savings_pots sp ON w.saving_pot_id = sp.id
 		WHERE w.id = $1 AND w.user_id = $2
 	`, id, userID).Scan(
-		&it.ID, &it.Name, &it.Price, &it.Priority, &it.Category, &it.Link, &it.Note,
-		&targetDate, &it.Status, &savingPotID, &savingPotName, &saldoPos,
+		&it.ID, &it.Name, &it.Price, &it.Priority, &it.Category, &it.Link, &it.LinkAkhir, &it.Situs, &it.PriceSource,
+		&imageID, &it.Note, &targetDate, &it.Status, &savingPotID, &savingPotName, &saldoPos,
 		&boughtAt, &boughtTxID, &createdAt,
 	)
 	if err != nil {
@@ -366,6 +441,12 @@ func (h *Handler) GetWishlistItemByID(c *fiber.Ctx) error {
 			return ErrorResponse(c, fiber.StatusNotFound, "Item wishlist tidak ditemukan")
 		}
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal membaca item wishlist")
+	}
+
+	baseURL := c.BaseURL()
+	jwtSecret := ""
+	if h.Config != nil {
+		jwtSecret = h.Config.JWTSecret
 	}
 
 	now := time.Now()
@@ -381,6 +462,16 @@ func (h *Handler) GetWishlistItemByID(c *fiber.Ctx) error {
 	}
 	if boughtTxID.Valid {
 		it.BoughtTransactionID = &boughtTxID.String
+	}
+	if imageID.Valid && imageID.String != "" {
+		imgID := imageID.String
+		it.ImageID = &imgID
+		fURL := media.GenerateSignedImageURL(baseURL, imgID, jwtSecret, 1*time.Hour)
+		it.FotoURL = &fURL
+		it.FotoThumbURL = &fURL
+	}
+	if it.Situs == "" && it.Link != "" {
+		it.Situs = media.DetectSite(it.Link)
 	}
 	if savingPotID.Valid {
 		it.SavingPotID = &savingPotID.String
@@ -422,6 +513,9 @@ func (h *Handler) UpdateWishlistItem(c *fiber.Ctx) error {
 		Priority    *string `json:"priority"`
 		Category    *string `json:"category"`
 		Link        *string `json:"link"`
+		ImageID     *string `json:"image_id"`
+		ImageURL    *string `json:"image_url"`
+		PriceSource *string `json:"price_source"`
 		Note        *string `json:"note"`
 		TargetDate  *string `json:"target_date"`
 		SavingPotID *string `json:"saving_pot_id"`
@@ -491,17 +585,85 @@ func (h *Handler) UpdateWishlistItem(c *fiber.Ctx) error {
 		savingPotIDVal = &potID
 	}
 
+	// Cek image_id lama
+	var oldImageID sql.NullString
+	_ = h.DB.QueryRow("SELECT image_id FROM wishlist_items WHERE id = $1 AND user_id = $2", id, userID).Scan(&oldImageID)
+
+	sourceSite := ""
+	if link != "" {
+		sourceSite = media.DetectSite(link)
+	}
+
+	priceSource := "manual"
+	if input.PriceSource != nil && strings.TrimSpace(*input.PriceSource) == "link" {
+		priceSource = "link"
+	}
+
+	var finalImageID *string
+	if oldImageID.Valid {
+		s := oldImageID.String
+		finalImageID = &s
+	}
+
+	imageChanged := false
+	if input.ImageID != nil {
+		imgID := strings.TrimSpace(*input.ImageID)
+		if imgID == "" {
+			finalImageID = nil
+			imageChanged = true
+		} else {
+			if _, err := uuid.Parse(imgID); err != nil {
+				return ErrorResponse(c, fiber.StatusBadRequest, "Format image_id tidak valid")
+			}
+			var imgExists bool
+			_ = h.DB.QueryRow("SELECT true FROM wishlist_images WHERE id = $1 AND user_id = $2", imgID, userID).Scan(&imgExists)
+			if !imgExists {
+				return ErrorResponse(c, fiber.StatusNotFound, "Foto tidak ditemukan atau bukan milik akun Anda")
+			}
+			finalImageID = &imgID
+			imageChanged = true
+		}
+	} else if input.ImageURL != nil && strings.TrimSpace(*input.ImageURL) != "" {
+		imgURL := strings.TrimSpace(*input.ImageURL)
+		parsedImgURL, err := media.ValidateURLFormat(imgURL)
+		if err == nil {
+			client := media.NewSSRFSafeHTTPClient(8*time.Second, false)
+			req, err := http.NewRequestWithContext(context.Background(), "GET", parsedImgURL.String(), nil)
+			if err == nil {
+				req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+				if resp, err := client.Do(req); err == nil && resp.StatusCode == http.StatusOK {
+					defer resp.Body.Close()
+					if processed, err := media.ProcessAndResizeImage(resp.Body, 800); err == nil {
+						if newImgID, err := h.saveWishlistImage(context.Background(), userID, processed); err == nil {
+							finalImageID = &newImgID
+							imageChanged = true
+						}
+					}
+				}
+			}
+		}
+	}
+
 	result, err := h.DB.Exec(`
 		UPDATE wishlist_items
-		SET name = $1, price = $2, priority = $3, category = $4, link = $5, note = $6, target_date = $7, saving_pot_id = $8
-		WHERE id = $9 AND user_id = $10
-	`, name, input.Price, priority, category, link, note, targetDateVal, savingPotIDVal, id, userID)
+		SET name = $1, price = $2, priority = $3, category = $4, link = $5, source_site = $6, link_resolved = $5, price_source = $7, image_id = $8, note = $9, target_date = $10, saving_pot_id = $11
+		WHERE id = $12 AND user_id = $13
+	`, name, input.Price, priority, category, link, sourceSite, priceSource, finalImageID, note, targetDateVal, savingPotIDVal, id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal memperbarui item wishlist: "+err.Error())
 	}
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
 		return ErrorResponse(c, fiber.StatusNotFound, "Item wishlist tidak ditemukan")
+	}
+
+	// Jika image diganti, hapus gambar lama jika tidak dipakai item lain
+	if imageChanged && oldImageID.Valid && (finalImageID == nil || *finalImageID != oldImageID.String) {
+		var otherCount int
+		_ = h.DB.QueryRow("SELECT COUNT(*) FROM wishlist_items WHERE image_id = $1 AND id <> $2", oldImageID.String, id).Scan(&otherCount)
+		if otherCount == 0 {
+			_, _ = h.DB.Exec("DELETE FROM wishlist_images WHERE id = $1 AND user_id = $2", oldImageID.String, userID)
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -520,7 +682,8 @@ func (h *Handler) DeleteWishlistItem(c *fiber.Ctx) error {
 	}
 
 	var status string
-	err := h.DB.QueryRow("SELECT status FROM wishlist_items WHERE id = $1 AND user_id = $2", id, userID).Scan(&status)
+	var imageID sql.NullString
+	err := h.DB.QueryRow("SELECT status, image_id FROM wishlist_items WHERE id = $1 AND user_id = $2", id, userID).Scan(&status, &imageID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrorResponse(c, fiber.StatusNotFound, "Item wishlist tidak ditemukan")
@@ -541,6 +704,15 @@ func (h *Handler) DeleteWishlistItem(c *fiber.Ctx) error {
 	_, err = h.DB.Exec("DELETE FROM wishlist_items WHERE id = $1 AND user_id = $2", id, userID)
 	if err != nil {
 		return ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghapus item wishlist")
+	}
+
+	// Hapus gambar yatim jika tidak dipakai item lain
+	if imageID.Valid && imageID.String != "" {
+		var otherCount int
+		_ = h.DB.QueryRow("SELECT COUNT(*) FROM wishlist_items WHERE image_id = $1", imageID.String).Scan(&otherCount)
+		if otherCount == 0 {
+			_, _ = h.DB.Exec("DELETE FROM wishlist_images WHERE id = $1 AND user_id = $2", imageID.String, userID)
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -762,12 +934,12 @@ func (h *Handler) BuyWishlistItem(c *fiber.Ctx) error {
 	// 1. Ambil data wishlist item
 	var itemName, category, status string
 	var itemPrice int64
-	var defaultPotID sql.NullString
+	var defaultPotID, itemLink sql.NullString
 	err = tx.QueryRowContext(ctx, `
-		SELECT name, price, category, status, saving_pot_id 
+		SELECT name, price, category, status, saving_pot_id, link 
 		FROM wishlist_items 
 		WHERE id = $1 AND user_id = $2
-	`, id, userID).Scan(&itemName, &itemPrice, &category, &status, &defaultPotID)
+	`, id, userID).Scan(&itemName, &itemPrice, &category, &status, &defaultPotID, &itemLink)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return ErrorResponse(c, fiber.StatusNotFound, "Item wishlist tidak ditemukan")
@@ -841,6 +1013,10 @@ func (h *Handler) BuyWishlistItem(c *fiber.Ctx) error {
 	txNote := itemName
 	if input.Note != nil && strings.TrimSpace(*input.Note) != "" {
 		txNote = strings.TrimSpace(*input.Note)
+	}
+	// Sertakan link produk di note transaksi bila ada
+	if itemLink.Valid && strings.TrimSpace(itemLink.String) != "" {
+		txNote = fmt.Sprintf("%s (%s)", txNote, strings.TrimSpace(itemLink.String))
 	}
 
 	_, err = tx.ExecContext(ctx, `

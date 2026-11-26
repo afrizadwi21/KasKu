@@ -164,6 +164,19 @@ func (h *Handler) GetMeta(c *fiber.Ctx) error {
 		}
 	}
 
+	// Daftar situs wishlist yang pernah dipakai
+	sRows, err := h.DB.Query("SELECT DISTINCT TRIM(source_site) FROM wishlist_items WHERE user_id = $1 AND TRIM(source_site) <> '' ORDER BY TRIM(source_site) ASC", userID)
+	situsList := make([]string, 0)
+	if err == nil {
+		defer sRows.Close()
+		for sRows.Next() {
+			var s string
+			if err := sRows.Scan(&s); err == nil && s != "" {
+				situsList = append(situsList, s)
+			}
+		}
+	}
+
 	return c.JSON(fiber.Map{
 		"kategori": fiber.Map{
 			"masuk":  calc.ValidMasukCategories,
@@ -173,6 +186,7 @@ func (h *Handler) GetMeta(c *fiber.Ctx) error {
 		"source":       sources,
 		"pos_tabungan": posTabungan,
 		"wishlist":     wishlistNames,
+		"situs":        situsList,
 	})
 }
 

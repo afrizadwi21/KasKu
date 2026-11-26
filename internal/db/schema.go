@@ -131,7 +131,21 @@ CREATE TABLE IF NOT EXISTS savings_movements (
 CREATE INDEX IF NOT EXISTS idx_savings_movements_user_pot_date 
 ON savings_movements (user_id, pot_id, date);
 
--- 10. Tabel wishlist_items
+-- 10. Tabel wishlist_images
+CREATE TABLE IF NOT EXISTS wishlist_images (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content_type TEXT NOT NULL DEFAULT 'image/jpeg',
+    data BYTEA NOT NULL,
+    width INT NOT NULL DEFAULT 0,
+    height INT NOT NULL DEFAULT 0,
+    size_bytes INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_wishlist_images_user_id ON wishlist_images (user_id);
+
+-- 11. Tabel wishlist_items
 CREATE TABLE IF NOT EXISTS wishlist_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -144,6 +158,10 @@ CREATE TABLE IF NOT EXISTS wishlist_items (
     target_date DATE NULL,
     status TEXT NOT NULL CHECK (status IN ('aktif', 'dibeli', 'dibatalkan')) DEFAULT 'aktif',
     saving_pot_id UUID NULL REFERENCES savings_pots(id) ON DELETE SET NULL,
+    image_id UUID NULL REFERENCES wishlist_images(id) ON DELETE SET NULL,
+    source_site TEXT NOT NULL DEFAULT '',
+    link_resolved TEXT NOT NULL DEFAULT '',
+    price_source TEXT NOT NULL DEFAULT 'manual' CHECK (price_source IN ('manual', 'link')),
     bought_at DATE NULL,
     bought_transaction_id UUID NULL REFERENCES transactions(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -151,5 +169,6 @@ CREATE TABLE IF NOT EXISTS wishlist_items (
 
 CREATE INDEX IF NOT EXISTS idx_wishlist_user_status_priority 
 ON wishlist_items (user_id, status, priority);
+
 
 `

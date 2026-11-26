@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -63,6 +64,22 @@ func main() {
 
 	h := handlers.NewHandler(database, cfg)
 	h.RegisterRoutes(app)
+
+	// Pembersihan gambar yatim saat server start dan setiap 24 jam
+	if database != nil {
+		go func() {
+			if count, err := h.CleanOrphanImages(); err == nil && count > 0 {
+				log.Printf("[Cleanup] Berhasil membersihkan %d gambar yatim saat startup.", count)
+			}
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for range ticker.C {
+				if count, err := h.CleanOrphanImages(); err == nil && count > 0 {
+					log.Printf("[Cleanup] Berhasil membersihkan %d gambar yatim harian.", count)
+				}
+			}
+		}()
+	}
 
 	// Graceful shutdown handling
 	go func() {

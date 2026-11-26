@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"kasku-backend/internal/auth"
 	"kasku-backend/internal/config"
 	"kasku-backend/internal/handlers"
+	"kasku-backend/internal/media"
 )
 
 func TestWishlistPreviewAndBuyFlow(t *testing.T) {
@@ -106,9 +108,9 @@ func TestWishlistPreviewAndBuyFlow(t *testing.T) {
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 
-	mock.ExpectQuery("SELECT name, price, category, status, saving_pot_id FROM wishlist_items WHERE id = \\$1 AND user_id = \\$2").
+	mock.ExpectQuery("SELECT name, price, category, status, saving_pot_id, link FROM wishlist_items WHERE id = \\$1 AND user_id = \\$2").
 		WithArgs(itemID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"name", "price", "category", "status", "saving_pot_id"}).AddRow("Headset", 30000, "Belanja", "aktif", nil))
+		WillReturnRows(sqlmock.NewRows([]string{"name", "price", "category", "status", "saving_pot_id", "link"}).AddRow("Headset", 30000, "Belanja", "aktif", nil, nil))
 
 	// Get balances di buy
 	mock.ExpectQuery("SELECT value FROM settings WHERE user_id = \\$1 AND key = 'opening_balance'").
@@ -215,9 +217,9 @@ func TestWishlistValidationAndConflict(t *testing.T) {
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 
-	mock.ExpectQuery("SELECT name, price, category, status, saving_pot_id FROM wishlist_items WHERE id = \\$1 AND user_id = \\$2").
+	mock.ExpectQuery("SELECT name, price, category, status, saving_pot_id, link FROM wishlist_items WHERE id = \\$1 AND user_id = \\$2").
 		WithArgs(itemID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"name", "price", "category", "status", "saving_pot_id"}).AddRow("Headset", 30000, "Belanja", "dibeli", nil))
+		WillReturnRows(sqlmock.NewRows([]string{"name", "price", "category", "status", "saving_pot_id", "link"}).AddRow("Headset", 30000, "Belanja", "dibeli", nil, nil))
 
 	mock.ExpectRollback()
 
@@ -374,9 +376,9 @@ func TestWishlistUndoBuyAndSpendFromPos(t *testing.T) {
 		WithArgs(userA).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userA))
 
-	mock.ExpectQuery("SELECT name, price, category, status, saving_pot_id FROM wishlist_items WHERE id = \\$1 AND user_id = \\$2").
+	mock.ExpectQuery("SELECT name, price, category, status, saving_pot_id, link FROM wishlist_items WHERE id = \\$1 AND user_id = \\$2").
 		WithArgs(itemID, userA).
-		WillReturnRows(sqlmock.NewRows([]string{"name", "price", "category", "status", "saving_pot_id"}).AddRow("Beli Obat", 15000, "Belanja", "aktif", potID))
+		WillReturnRows(sqlmock.NewRows([]string{"name", "price", "category", "status", "saving_pot_id", "link"}).AddRow("Beli Obat", 15000, "Belanja", "aktif", potID, nil))
 
 	// Query saldo pos
 	mock.ExpectQuery("SELECT p.archived, COALESCE\\(SUM").
@@ -448,4 +450,96 @@ func TestWishlistUndoBuyAndSpendFromPos(t *testing.T) {
 		t.Errorf("Ekspektasi saldo bebas setelah buy pos 60000, didapat %v", buyPosData["saldo_bebas"])
 	}
 }
+
+func TestWishlistMediaEndpoints(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Gagal membuat mock database: %v", err)
+	}
+	defer db.Close()
+
+	app := fiber.New()
+	jwtSecret := "supersecretjwtkeythatisover32characterslong123456"
+	cfg := &config.Config{
+		JWTSecret:         jwtSecret,
+		AllowRegistration: true,
+		AccessTTL:         15 * time.Minute,
+		RefreshTTL:        720 * time.Hour,
+	}
+
+	h := handlers.NewHandler(db, cfg)
+	h.RegisterRoutes(app)
+
+	userID := uuid.New().String()
+	token, _ := auth.GenerateAccessToken(userID, cfg.JWTSecret, cfg.AccessTTL)
+
+	// Test 1: Fetch link gagal tidak menghalangi sistem (memberikan ok=false dan pesan ramah)
+	mock.ExpectQuery("SELECT true FROM users WHERE id = \\$1").
+		WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{"true"}).AddRow(true))
+
+	fetchBody := bytes.NewReader([]byte(`{"url": "https://shopee.co.id/product/12345/6789"}`))
+	fetchReq := httptest.NewRequest("POST", "/api/wishlist/fetch-link", fetchBody)
+	fetchReq.Header.Set("Authorization", "Bearer "+token)
+	fetchReq.Header.Set("Content-Type", "application/json")
+
+	fetchResp, err := app.Test(fetchReq)
+	if err != nil {
+		t.Fatalf("Request fetch-link gagal: %v", err)
+	}
+	if fetchResp.StatusCode != http.StatusOK {
+		t.Fatalf("Ekspektasi fetch-link 200 OK, didapat %d", fetchResp.StatusCode)
+	}
+
+	// Test 2: GET Signed Wishlist Image
+	imageID := uuid.New().String()
+	exp := time.Now().Add(1 * time.Hour).Unix()
+	urlSigned := media.GenerateSignedImageURL("http://localhost:8080", imageID, jwtSecret, 1*time.Hour)
+
+	// Ekstrak exp dan sig
+	expStr := fmt.Sprintf("%d", exp)
+	sigIndex := strings.Index(urlSigned, "sig=")
+	sigStr := urlSigned[sigIndex+4:]
+
+	mock.ExpectQuery("SELECT content_type, data FROM wishlist_images WHERE id = \\$1").
+		WithArgs(imageID).
+		WillReturnRows(sqlmock.NewRows([]string{"content_type", "data"}).AddRow("image/jpeg", []byte("jpeg_data_here")))
+
+	imgReq := httptest.NewRequest("GET", fmt.Sprintf("/img/wishlist/%s?exp=%s&sig=%s", imageID, expStr, sigStr), nil)
+	imgResp, err := app.Test(imgReq)
+	if err != nil {
+		t.Fatalf("Request signed image gagal: %v", err)
+	}
+	if imgResp.StatusCode != http.StatusOK {
+		t.Fatalf("Ekspektasi signed image 200 OK, didapat %d", imgResp.StatusCode)
+	}
+	if imgResp.Header.Get("Content-Type") != "image/jpeg" {
+		t.Errorf("Content-Type bukan image/jpeg: %s", imgResp.Header.Get("Content-Type"))
+	}
+
+	// Test 3: DELETE Wishlist Image
+	mock.ExpectQuery("SELECT true FROM users WHERE id = \\$1").
+		WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{"true"}).AddRow(true))
+
+	mock.ExpectExec("UPDATE wishlist_items SET image_id = NULL WHERE image_id = \\$1 AND user_id = \\$2").
+		WithArgs(imageID, userID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("DELETE FROM wishlist_images WHERE id = \\$1 AND user_id = \\$2").
+		WithArgs(imageID, userID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	delImgReq := httptest.NewRequest("DELETE", fmt.Sprintf("/api/wishlist/images/%s", imageID), nil)
+	delImgReq.Header.Set("Authorization", "Bearer "+token)
+
+	delImgResp, err := app.Test(delImgReq)
+	if err != nil {
+		t.Fatalf("Request delete image gagal: %v", err)
+	}
+	if delImgResp.StatusCode != http.StatusOK {
+		t.Fatalf("Ekspektasi delete image 200 OK, didapat %d", delImgResp.StatusCode)
+	}
+}
+
 
