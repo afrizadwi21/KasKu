@@ -103,7 +103,7 @@ export function Scroll3DFrame({
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300"
             style={{
-              background: `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(56, 189, 248, 0.14), transparent 55%)`,
+              background: `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255, 91, 20, 0.16), transparent 58%)`,
               opacity: 1 - distFromCenter * 0.65,
             }}
           />

@@ -28,24 +28,24 @@ const PRIVACY_POINTS = [
 
 export function LandingFooter() {
   return (
-    <footer className="bg-black text-white border-t border-white/15">
+    <footer className="bg-[#140a05] text-[#f8f4ee] border-t border-[#f8f4ee]/15">
       {/* Privacy & Control Section */}
       <section
         id="privasi"
-        className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28 border-b border-white/15"
+        className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28 border-b border-[#f8f4ee]/15"
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-5 space-y-5">
-            <h2 className="font-display text-4xl sm:text-5xl text-white">
+            <h2 className="font-display text-4xl sm:text-5xl text-[#f8f4ee]">
               Data keuangan Anda hanya untuk Anda.
             </h2>
-            <p className="text-base text-[#bbbcbc] leading-relaxed">
+            <p className="text-base text-[#ffc9a3]/85 leading-relaxed">
               KasKu dibuat sebagai alat bantu catat pribadi yang tenang. Semua angka dihitung apa adanya supaya Anda selalu tahu kondisi uang Anda sebelum mengambil keputusan.
             </p>
             <div className="pt-2">
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-sm bg-white hover:bg-[#f5f5f3] text-black font-semibold text-sm transition-all duration-200 active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-sm bg-[#ff5b14] hover:bg-[#ff7a2e] text-white font-semibold text-sm transition-all duration-200 active:scale-[0.98]"
               >
                 <span>Mulai Pakai KasKu</span>
                 <ArrowUpRight className="w-4 h-4" />
@@ -53,7 +53,7 @@ export function LandingFooter() {
             </div>
 
             <Scroll3DFrame direction="left" intensity={1.1} className="pt-4">
-              <div className="overflow-hidden rounded-sm border border-white/15 bg-black">
+              <div className="overflow-hidden rounded-sm border border-[#f8f4ee]/15 bg-[#1a0e08]">
                 <div className="aspect-[16/10] overflow-hidden">
                   <img
                     src="/images/3d-privacy-lock.jpg"
@@ -65,7 +65,7 @@ export function LandingFooter() {
             </Scroll3DFrame>
           </div>
 
-          <div className="lg:col-span-7 divide-y divide-white/15 border-y border-white/15">
+          <div className="lg:col-span-7 divide-y divide-[#f8f4ee]/15 border-y border-[#f8f4ee]/15">
             {PRIVACY_POINTS.map((item) => {
               const Icon = item.icon;
               return (
@@ -73,12 +73,12 @@ export function LandingFooter() {
                   key={item.title}
                   className="py-5 flex items-start gap-4"
                 >
-                  <Icon className="w-5 h-5 text-[#38bdf8] shrink-0 mt-0.5" aria-hidden="true" />
+                  <Icon className="w-5 h-5 text-[#ff7a2e] shrink-0 mt-0.5" aria-hidden="true" />
                   <div className="space-y-1">
-                    <h3 className="font-display text-base font-semibold text-white">
+                    <h3 className="font-display-sub text-base text-[#f8f4ee]">
                       {item.title}
                     </h3>
-                    <p className="text-sm text-[#bbbcbc] leading-relaxed">
+                    <p className="text-sm text-[#ffc9a3]/80 leading-relaxed">
                       {item.detail}
                     </p>
                   </div>
@@ -94,11 +94,11 @@ export function LandingFooter() {
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">
             <svg width="24" height="24" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-              <rect x="2" y="2" width="24" height="24" rx="4" stroke="white" strokeWidth="1.75" />
+              <rect x="2" y="2" width="24" height="24" rx="4" stroke="#f8f4ee" strokeWidth="1.75" />
               <path
                 d="M9 8.5V19.5M9 14L17.5 8.5M12.5 11.8L18.5 19.5"
-                stroke="#38bdf8"
-                strokeWidth="2"
+                stroke="#ff5b14"
+                strokeWidth="2.2"
                 strokeLinecap="square"
               />
             </svg>
@@ -106,30 +106,30 @@ export function LandingFooter() {
               KasKu
             </span>
           </div>
-          <p className="text-xs text-[#bbbcbc]">
+          <p className="text-xs text-[#ffc9a3]/75">
             Catatan kas pribadi dengan saldo bebas, pos tabungan, dan simulasi wishlist.
           </p>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-6 text-sm text-[#bbbcbc]" aria-label="Navigasi footer">
-          <a href="#cara-kerja" className="hover:text-white transition-colors">
+        <nav className="flex flex-wrap items-center gap-6 text-sm text-[#ffc9a3]/80" aria-label="Navigasi footer">
+          <a href="#cara-kerja" className="hover:text-[#f8f4ee] transition-colors">
             Cara Kerja
           </a>
-          <a href="#fitur" className="hover:text-white transition-colors">
+          <a href="#fitur" className="hover:text-[#f8f4ee] transition-colors">
             Fitur
           </a>
-          <a href="#simulasi" className="hover:text-white transition-colors">
+          <a href="#simulasi" className="hover:text-[#f8f4ee] transition-colors">
             Simulasi
           </a>
-          <a href="#privasi" className="hover:text-white transition-colors">
+          <a href="#privasi" className="hover:text-[#f8f4ee] transition-colors">
             Privasi
           </a>
-          <Link href="/dashboard" className="text-[#38bdf8] hover:text-white transition-colors font-medium">
+          <Link href="/dashboard" className="text-[#ff7a2e] hover:text-[#f8f4ee] transition-colors font-medium">
             Dashboard
           </Link>
         </nav>
 
-        <div className="text-xs text-white/50 font-mono">
+        <div className="text-xs text-[#f8f4ee]/50 font-mono">
           © 2026 KasKu
         </div>
       </div>
