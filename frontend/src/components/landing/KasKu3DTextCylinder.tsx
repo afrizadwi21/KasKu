@@ -98,7 +98,7 @@ export function KasKu3DTextCylinder() {
         >
           <ol
             ref={drumRef}
-            className="relative w-full h-24 m-0 p-0 list-none flex items-center justify-center will-change-transform"
+            className="relative w-[80%] sm:w-[86%] mx-auto h-24 m-0 p-0 list-none flex items-center justify-center will-change-transform"
             style={{ transformStyle: "preserve-3d" }}
           >
             {CYLINDER_ITEMS.map((item, idx) => {
@@ -110,7 +110,7 @@ export function KasKu3DTextCylinder() {
               return (
                 <li
                   key={item.label}
-                  className="absolute inset-x-0 flex items-center justify-between gap-4 px-4 sm:px-8 py-3 transition-opacity duration-300"
+                  className="absolute inset-x-0 flex items-center justify-center sm:justify-between gap-3 px-2 sm:px-6 py-3 transition-opacity duration-300"
                   style={{
                     transform: `rotateX(${itemAngle}deg) translateZ(${radius}px)`,
                     backfaceVisibility: "hidden",
@@ -118,14 +118,14 @@ export function KasKu3DTextCylinder() {
                   }}
                 >
                   <span
-                    className={`font-display text-2xl sm:text-5xl lg:text-6xl tracking-tight transition-colors duration-300 ${
+                    className={`font-display text-xl sm:text-4xl lg:text-5xl tracking-tight text-center sm:text-left transition-colors duration-300 ${
                       isFocused ? "text-[#10b981]" : "text-[#f4f7f5]"
                     }`}
                   >
                     {item.label}
                   </span>
                   <span
-                    className={`hidden sm:inline-block font-mono text-xs uppercase tracking-widest px-3 py-1 rounded-sm border transition-colors duration-300 ${
+                    className={`hidden sm:inline-block shrink-0 font-mono text-xs uppercase tracking-widest px-3 py-1 rounded-sm border transition-colors duration-300 ${
                       isFocused
                         ? "border-[#10b981] text-[#34d399] bg-[#10b981]/10"
                         : "border-[#f4f7f5]/20 text-[#a3b8ad]"
