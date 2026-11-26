@@ -59,13 +59,26 @@ body {
   border-color: var(--border-hairline);
 }
 
-/* Display typography */
+/* Display typography (Archivo Variable Condensed — Impeccable reference 3dcede2c5849b9ec) */
 .font-display {
-  font-family: var(--font-archivo), var(--font-geist-sans), system-ui, sans-serif;
+  font-family: "Archivo", var(--font-archivo), var(--font-geist-sans), system-ui, sans-serif;
+  font-stretch: 62%;
+  font-variation-settings: "wdth" 62;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.font-display-sub {
+  font-family: "Archivo", var(--font-archivo), var(--font-geist-sans), system-ui, sans-serif;
+  font-stretch: 75%;
+  font-variation-settings: "wdth" 75;
+  font-weight: 800;
 }
 
 /* Heart Aerospace Landing Palette */
 .landing-theme {
+  font-family: "Archivo", var(--font-archivo), var(--font-geist-sans), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   --ha-bg: #ffffff;
   --ha-bg-alt: #f5f5f3;
   --ha-ink: #000000;

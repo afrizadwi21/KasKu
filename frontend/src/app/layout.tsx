@@ -30,6 +30,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${archivo.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,400..700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-[var(--surface-canvas)] text-[var(--text-primary)] selection:bg-[var(--accent-primary)] selection:text-white">
         {children}
       </body>
