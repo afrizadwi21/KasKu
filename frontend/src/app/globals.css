@@ -77,21 +77,20 @@ body {
   font-weight: 800;
 }
 
-/* TasteSkill Warm Espresso & Orange Landing Palette */
+/* KasKu Obsidian & Emerald Landing Palette */
 .landing-theme {
   font-family: "Archivo", var(--font-geist-sans), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  --ts-ink: #1a0e08;
-  --ts-ink-deep: #140a05;
-  --ts-ink-2: #2a1309;
-  --ts-rust: #7a2306;
-  --ts-orange: #ff5b14;
-  --ts-orange-hot: #ff7a2e;
-  --ts-peach: #ffc9a3;
-  --ts-cream: #f8f4ee;
-  --ts-sunk: #f3eee7;
-  --ts-label: #c2410c;
-  --ts-hair: rgba(20, 10, 5, 0.1);
+  --kk-ink: #0b110e;
+  --kk-ink-deep: #070a09;
+  --kk-ink-elevated: #0e1412;
+  --kk-emerald: #10b981;
+  --kk-emerald-bright: #34d399;
+  --kk-emerald-deep: #059669;
+  --kk-mint: #a7f3d0;
+  --kk-canvas: #f7f8f7;
+  --kk-sunk: #eef1ef;
+  --kk-hair: rgba(11, 17, 14, 0.1);
 }
 
 /* Landing page editorial motion */

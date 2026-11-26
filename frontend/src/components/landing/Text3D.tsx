@@ -52,8 +52,8 @@ export function Text3D({
 
   const textShadow =
     variant === "light"
-      ? "0 1px 0 #7a2306, 0 2px 0 #5e1a04, 0 3px 0 #431102, 0 4px 0 #2a0a01, 0 12px 24px rgba(0, 0, 0, 0.55)"
-      : "0 1px 0 #ddd2c3, 0 2px 0 #cfc1ae, 0 3px 0 #c0ae97, 0 4px 0 #b09b81, 0 10px 20px rgba(20, 10, 5, 0.16)";
+      ? "0 1px 0 #064e3b, 0 2px 0 #043a2c, 0 3px 0 #02261d, 0 4px 0 #01140f, 0 12px 24px rgba(0, 0, 0, 0.55)"
+      : "0 1px 0 #d5ded9, 0 2px 0 #c3d0c9, 0 3px 0 #b1c2b9, 0 4px 0 #9fb4a9, 0 10px 20px rgba(7, 10, 9, 0.14)";
 
   return (
     <Tag

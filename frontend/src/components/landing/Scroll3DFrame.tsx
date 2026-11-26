@@ -67,7 +67,7 @@ export function Scroll3DFrame({
         if (glareRef.current) {
           const glareX = pointerRef.current.active ? 50 + currentPx * 60 : 50 + currentOffset * 28;
           const glareY = pointerRef.current.active ? 50 + currentPy * 60 : 50 - currentOffset * 28;
-          glareRef.current.style.background = `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 91, 20, 0.17), transparent 58%)`;
+          glareRef.current.style.background = `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(16, 185, 129, 0.16), transparent 58%)`;
           glareRef.current.style.opacity = `${(1 - distFromCenter * 0.65).toFixed(2)}`;
         }
       }

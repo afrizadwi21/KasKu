@@ -28,15 +28,15 @@ export function LandingNavbar() {
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "bg-[#f8f4ee]/95 backdrop-blur-md border-b border-[#140a05]/10 text-[#1a0e08]"
-          : "bg-transparent border-b border-[#f8f4ee]/15 text-[#f8f4ee]"
+          ? "bg-[#f7f8f7]/95 backdrop-blur-md border-b border-[#0b110e]/10 text-[#0b110e]"
+          : "bg-transparent border-b border-[#f4f7f5]/15 text-[#f4f7f5]"
       }`}
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 sm:h-20 flex items-center justify-between">
         {/* Brand Wordmark */}
         <Link
           href="/"
-          className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5b14] rounded-md"
+          className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b981] rounded-md"
         >
           <svg
             width="28"
@@ -57,7 +57,7 @@ export function LandingNavbar() {
             />
             <path
               d="M9 8.5V19.5M9 14L17.5 8.5M12.5 11.8L18.5 19.5"
-              stroke="#ff5b14"
+              stroke="#10b981"
               strokeWidth="2.2"
               strokeLinecap="square"
             />
@@ -73,10 +73,10 @@ export function LandingNavbar() {
             <a
               key={item.href}
               href={item.href}
-              className={`text-sm font-medium tracking-wide transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5b14] rounded-sm ${
+              className={`text-sm font-medium tracking-wide transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b981] rounded-sm ${
                 scrolled
-                  ? "text-[#1a0e08]/70 hover:text-[#1a0e08]"
-                  : "text-[#f8f4ee]/80 hover:text-[#f8f4ee]"
+                  ? "text-[#47544d] hover:text-[#0b110e]"
+                  : "text-[#f4f7f5]/80 hover:text-[#f4f7f5]"
               }`}
             >
               {item.label}
@@ -88,10 +88,10 @@ export function LandingNavbar() {
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard"
-            className={`hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5b14] ${
+            className={`hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b981] ${
               scrolled
-                ? "bg-[#ff5b14] text-white hover:bg-[#c2410c]"
-                : "bg-[#ff5b14] text-white hover:bg-[#ff7a2e]"
+                ? "bg-[#059669] text-white hover:bg-[#047857]"
+                : "bg-[#10b981] text-[#070a09] hover:bg-[#34d399]"
             }`}
           >
             <span>Buka Dashboard</span>
@@ -103,8 +103,8 @@ export function LandingNavbar() {
             onClick={() => setMobileOpen((prev) => !prev)}
             aria-label={mobileOpen ? "Tutup menu navigasi" : "Buka menu navigasi"}
             aria-expanded={mobileOpen}
-            className={`md:hidden p-2 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5b14] ${
-              scrolled ? "hover:bg-[#f3eee7]" : "hover:bg-white/10"
+            className={`md:hidden p-2 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b981] ${
+              scrolled ? "hover:bg-[#eef1ef]" : "hover:bg-white/10"
             }`}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -114,14 +114,14 @@ export function LandingNavbar() {
 
       {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="md:hidden bg-[#f8f4ee] text-[#1a0e08] border-b border-[#140a05]/10 px-5 py-4 space-y-3">
+        <div className="md:hidden bg-[#f7f8f7] text-[#0b110e] border-b border-[#0b110e]/10 px-5 py-4 space-y-3">
           <nav className="flex flex-col space-y-2" aria-label="Navigasi mobile">
             {NAV_LINKS.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className="py-2 text-sm font-medium text-[#1a0e08]/75 hover:text-[#1a0e08] border-b border-[#140a05]/10 last:border-b-0"
+                className="py-2 text-sm font-medium text-[#47544d] hover:text-[#0b110e] border-b border-[#0b110e]/10 last:border-b-0"
               >
                 {item.label}
               </a>
@@ -130,7 +130,7 @@ export function LandingNavbar() {
           <Link
             href="/dashboard"
             onClick={() => setMobileOpen(false)}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm text-sm font-semibold bg-[#ff5b14] text-white hover:bg-[#c2410c]"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm text-sm font-semibold bg-[#059669] text-white hover:bg-[#047857]"
           >
             <span>Buka Dashboard</span>
             <ArrowUpRight className="w-4 h-4" />

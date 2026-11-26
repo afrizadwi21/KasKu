@@ -28,7 +28,7 @@ export function LandingHero() {
   return (
     <section
       id="hero"
-      className="relative min-h-[92vh] w-full flex flex-col justify-between overflow-hidden bg-[#140a05] text-[#f8f4ee]"
+      className="relative min-h-[92vh] w-full flex flex-col justify-between overflow-hidden bg-[#070a09] text-[#f4f7f5]"
     >
       {/* Animated Full-Bleed Architectural Photo with 3D Scroll Depth */}
       <div
@@ -44,7 +44,7 @@ export function LandingHero() {
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-b from-[#140a05]/85 via-[#1a0e08]/55 to-[#140a05]/95"
+          className="absolute inset-0 bg-gradient-to-b from-[#070a09]/85 via-[#0b110e]/55 to-[#070a09]/95"
         />
       </div>
 
@@ -60,26 +60,26 @@ export function LandingHero() {
         }}
       >
         <div className="max-w-3xl space-y-6 animate-reveal-up">
-          <Text3D as="h1" variant="light" className="text-5xl sm:text-7xl lg:text-[5.25rem] text-balance text-[#f8f4ee]">
+          <Text3D as="h1" variant="light" className="text-5xl sm:text-7xl lg:text-[5.25rem] text-balance text-[#f4f7f5]">
             Tahu persis uang yang boleh dipakai hari ini.
           </Text3D>
-          <p className="text-base sm:text-xl text-[#ffc9a3]/90 max-w-2xl leading-relaxed font-normal">
+          <p className="text-base sm:text-xl text-[#a3b8ad] max-w-2xl leading-relaxed font-normal">
             KasKu memisahkan uang jajan dari tabungan Anda, mencatat siapa yang masih berhutang, mengingatkan tagihan rutin, dan menghitung sisa saldo sebelum Anda belanja.
           </p>
 
           <div className="pt-4 flex flex-wrap items-center gap-4">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm bg-[#ff5b14] hover:bg-[#ff7a2e] text-white font-semibold text-sm sm:text-base transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffc9a3]"
+              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm bg-[#10b981] hover:bg-[#34d399] text-[#070a09] font-semibold text-sm sm:text-base transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a7f3d0]"
             >
               <span>Mulai Catat Sekarang</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <a
               href="#showcase-3d"
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm border border-[#f8f4ee]/30 bg-[#f8f4ee]/5 hover:bg-[#f8f4ee]/15 text-[#f8f4ee] font-medium text-sm sm:text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5b14]"
+              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm border border-[#f4f7f5]/30 bg-[#f4f7f5]/5 hover:bg-[#f4f7f5]/15 text-[#f4f7f5] font-medium text-sm sm:text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b981]"
             >
-              <Play className="w-4 h-4 text-[#ff7a2e]" />
+              <Play className="w-4 h-4 text-[#34d399]" />
               <span>Lihat Cara Kerja 3D</span>
             </a>
           </div>
@@ -87,14 +87,14 @@ export function LandingHero() {
       </div>
 
       {/* Bottom Telemetry Strip */}
-      <div className="relative z-10 border-t border-[#f8f4ee]/15 bg-[#140a05]/80 backdrop-blur-sm">
+      <div className="relative z-10 border-t border-[#f4f7f5]/15 bg-[#070a09]/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-5 grid grid-cols-2 lg:grid-cols-4 gap-6">
           {TELEMETRY_ITEMS.map((item) => (
             <div key={item.label} className="space-y-1">
-              <div className="text-xs uppercase tracking-wider text-[#ffc9a3]/75 font-medium">
+              <div className="text-xs uppercase tracking-wider text-[#a3b8ad] font-medium">
                 {item.label}
               </div>
-              <div className="font-mono text-sm sm:text-base font-medium text-[#f8f4ee] num-tabular">
+              <div className="font-mono text-sm sm:text-base font-medium text-[#f4f7f5] num-tabular">
                 {item.value}
               </div>
             </div>
