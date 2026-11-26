@@ -1944,7 +1944,7 @@ export default function DashboardPage() {
                                   [pot.id]: e.target.value,
                                 }))
                               }
-                              className={`flex-1 ${inputClass}`}
+                              className={`flex-1 min-w-0 ${inputClass}`}
                             />
                             <button
                               type="button"
@@ -2470,7 +2470,7 @@ export default function DashboardPage() {
 
                     <form
                       onSubmit={handleUpdateProfileName}
-                      className="flex items-center gap-2"
+                      className="flex flex-wrap items-center gap-2 w-full sm:w-auto"
                     >
                       <input
                         type="text"
@@ -2478,7 +2478,7 @@ export default function DashboardPage() {
                         value={profileName}
                         onChange={(e) => setProfileName(e.target.value)}
                         placeholder="Ubah nama profil"
-                        className={inputClass}
+                        className={`flex-1 min-w-0 ${inputClass}`}
                       />
                       <button
                         type="submit"

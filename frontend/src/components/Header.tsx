@@ -404,7 +404,7 @@ export function Header({
             : "border-[#0b110e]/10 bg-white/95 text-[#0b110e]"
         }`}
       >
-        <div className="grid grid-cols-5 items-center h-16 px-2">
+        <div className="grid grid-cols-5 items-center h-16 px-1">
           {[
             { id: "dashboard", label: "Beranda", icon: LayoutDashboard },
             { id: "transactions", label: "Riwayat", icon: ListOrdered },
@@ -416,12 +416,12 @@ export function Header({
                 key={item.id}
                 type="button"
                 onClick={() => handleSelectTab(item.id)}
-                className={`h-full flex flex-col items-center justify-center gap-0.5 text-[10px] leading-none whitespace-nowrap transition-colors ${
+                className={`min-w-0 w-full h-16 flex flex-col items-center justify-center gap-1 text-[10px] font-medium leading-none whitespace-nowrap transition-colors ${
                   isActive
                     ? isDark
-                      ? "text-[#34d399] font-semibold"
-                      : "text-[#059669] font-semibold"
-                    : `${mutedCls} font-medium`
+                      ? "text-[#34d399]"
+                      : "text-[#059669]"
+                    : mutedCls
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
@@ -431,7 +431,7 @@ export function Header({
           })}
 
           {/* Center Raised FAB */}
-          <div className="h-full flex flex-col items-center justify-end pb-1.5">
+          <div className="min-w-0 w-full h-16 flex flex-col items-center justify-end pb-2">
             <button
               type="button"
               onClick={onOpenModal}
@@ -443,7 +443,7 @@ export function Header({
               <Plus className="w-6 h-6" />
             </button>
             <span
-              className={`mt-1 text-[10px] leading-none font-semibold whitespace-nowrap ${
+              className={`mt-1 text-[10px] leading-none font-medium whitespace-nowrap ${
                 isDark ? "text-[#34d399]" : "text-[#059669]"
               }`}
             >
@@ -462,12 +462,12 @@ export function Header({
                 key={item.id}
                 type="button"
                 onClick={() => handleSelectTab(item.id)}
-                className={`h-full flex flex-col items-center justify-center gap-0.5 text-[10px] leading-none whitespace-nowrap transition-colors ${
+                className={`min-w-0 w-full h-16 flex flex-col items-center justify-center gap-1 text-[10px] font-medium leading-none whitespace-nowrap transition-colors ${
                   isActive
                     ? isDark
-                      ? "text-[#34d399] font-semibold"
-                      : "text-[#059669] font-semibold"
-                    : `${mutedCls} font-medium`
+                      ? "text-[#34d399]"
+                      : "text-[#059669]"
+                    : mutedCls
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
