@@ -4,58 +4,58 @@ import React, { useState } from "react";
 import { ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
-const ARCHITECTURE_MODULES = [
+const FEATURE_MODULES = [
   {
     id: "arus-kas",
-    title: "Arus Kas & Saldo Bebas",
+    title: "Uang Masuk & Keluar",
     summary:
-      "Memisahkan uang fisik di rekening (Saldo Total) dari uang yang aman dibelanjakan hari ini (Saldo Bebas), lengkap dengan Jatah Harian otomatis hingga akhir bulan.",
+      "Catat pemasukan dari gaji, freelance, atau jual barang, lalu catat pengeluaran lengkap dengan daftar belanjaannya. Saldo langsung berubah setiap kali Anda menambah catatan.",
     specs: [
-      { label: "Rumus Saldo Bebas", value: "Saldo Total − Total Tersimpan" },
-      { label: "Jatah Harian", value: "Saldo Bebas / Sisa Hari Bulan Ini" },
-      { label: "Rincian Pembelian", value: "Multi-item (Qty × Harga Satuan)" },
+      { label: "Rincian Belanja", value: "Catat beberapa barang sekaligus dalam satu struk" },
+      { label: "Saldo Berjalan", value: "Langsung hitung sisa uang setelah tiap transaksi" },
+      { label: "Batas Pengeluaran", value: "Peringatan kalau belanja melebihi uang jajan" },
     ],
     image: "/images/telemetry-ledger.jpg",
-    imageAlt: "Komposisi presisi kartu finansial dan prisma kaca",
+    imageAlt: "Ilustrasi pencatatan kas harian KasKu",
   },
   {
     id: "tabungan",
-    title: "Pos Tabungan Terisolasi",
+    title: "Pos Tabungan",
     summary:
-      "Sisihkan dana untuk Dana Darurat atau target spesifik tanpa mengotori laporan pemasukan dan pengeluaran. Dilengkapi penguncian baris database untuk mencegah saldo negatif.",
+      "Buat pos tabungan terpisah seperti Dana Darurat, Beli HP, atau Liburan. Saat uang disisihkan, saldo jajan Anda berkurang tetapi uang itu tetap milik Anda.",
     specs: [
-      { label: "Jenis Mutasi", value: "Setor, Tarik, Pakai (Belanja)" },
-      { label: "Konsistensi", value: "DB Transaction + Row Lock" },
-      { label: "Estimasi Target", value: "Kalkulasi Setoran Per Bulan" },
+      { label: "Setor & Tarik", value: "Pindahkan uang masuk atau keluar pos kapan saja" },
+      { label: "Belanja dari Tabungan", value: "Bayar langsung dari pos tanpa memotong uang jajan" },
+      { label: "Target & Tenggat", value: "Hitung otomatis berapa yang perlu ditabung tiap bulan" },
     ],
     image: "/images/vault-clarity.jpg",
-    imageAlt: "Wadah penyimpanan modular yang melambangkan pos tabungan terstruktur",
+    imageAlt: "Wadah penyimpanan modular yang melambangkan pos tabungan KasKu",
   },
   {
     id: "wishlist",
-    title: "Wishlist, Foto & Simulasi",
+    title: "Wishlist & Foto",
     summary:
-      "Tempel link produk e-commerce untuk menarik nama, harga, dan foto secara otomatis, atau unggah foto sendiri. Simulasikan dampak pembelian sebelum uang benar-benar keluar.",
+      "Simpan daftar barang yang ingin dibeli. Cukup tempel link toko online untuk mengisi nama, harga, dan foto secara otomatis, atau unggah foto sendiri.",
     specs: [
-      { label: "Ekstraksi Metadata", value: "JSON-LD, Open Graph & Anti-SSRF" },
-      { label: "Pemrosesan Foto", value: "Resize 800px, Strip EXIF, Signed URL" },
-      { label: "Undo Pembelian", value: "Atomik 1-Klik Kembalikan Saldo" },
+      { label: "Simulasi Sebelum Beli", value: "Cek sisa saldo dan keamanan tagihan 7 hari ke depan" },
+      { label: "Rencana Belanja", value: "Urutkan barang prioritas yang sudah sanggup dibeli" },
+      { label: "Batal Beli", value: "Salah pencet beli? Kembalikan saldo dan barang dengan satu klik" },
     ],
     image: "/images/hero-kasku.jpg",
-    imageAlt: "Ruang kerja minimalis untuk perencanaan pembelian yang tenang",
+    imageAlt: "Ruang kerja minimalis untuk merencanakan pembelian wishlist",
   },
   {
     id: "kewajiban",
-    title: "Piutang, Hutang & Langganan",
+    title: "Hutang & Langganan",
     summary:
-      "Lacak siapa yang berhutang ke Anda beserta riwayat cicilan, pantau tagihan sekali bayar, dan hitung jatuh tempo langganan rutin dengan penyesuaian akhir bulan.",
+      "Catat siapa yang meminjam uang ke Anda beserta cicilannya. Pantau juga langganan bulanan atau tagihan listrik sebelum melewati tanggal jatuh tempo.",
     specs: [
-      { label: "Status Otomatis", value: "Lunas, Dicicil, Belum Dibayar" },
-      { label: "Siklus Langganan", value: "Mingguan, Bulanan, 3-Bulanan, Tahunan" },
-      { label: "Peringatan Risiko", value: "Deteksi Kewajiban > Saldo Bebas" },
+      { label: "Status Hutang", value: "Otomatis tampil Lunas, Dicicil, atau Belum Dibayar" },
+      { label: "Langganan Rutin", value: "Pengingat mingguan, bulanan, 3-bulanan, dan tahunan" },
+      { label: "Rekap Tagihan", value: "Peringatan jika total tagihan melebihi uang jajan" },
     ],
     image: "/images/telemetry-ledger.jpg",
-    imageAlt: "Instrumen ukur presisi untuk memantau kewajiban finansial",
+    imageAlt: "Catatan rapi untuk hutang piutang dan langganan rutin",
   },
 ];
 
@@ -74,10 +74,9 @@ function formatIDR(val: number): string {
 export function LandingFeatures() {
   const [activeModuleId, setActiveModuleId] = useState("arus-kas");
   const activeModule =
-    ARCHITECTURE_MODULES.find((m) => m.id === activeModuleId) ??
-    ARCHITECTURE_MODULES[0];
+    FEATURE_MODULES.find((m) => m.id === activeModuleId) ??
+    FEATURE_MODULES[0];
 
-  // Interactive Simulator State (matching KasKu seed scenario)
   const [selectedPrice, setSelectedPrice] = useState(30000);
   const [selectedName, setSelectedName] = useState("Headset Kerja");
   const [fundingSource, setFundingSource] = useState<"bebas" | "pos">("bebas");
@@ -110,18 +109,18 @@ export function LandingFeatures() {
 
   return (
     <div className="bg-white text-black">
-      {/* 1. Mission Statement Section */}
+      {/* 1. Cara Kerja KasKu */}
       <section
-        id="misi"
+        id="cara-kerja"
         className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28 border-b border-[#e4e4e2]"
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           <div className="lg:col-span-6 space-y-6">
             <h2 className="font-display text-3xl sm:text-5xl font-semibold tracking-[-0.025em] leading-[1.08] text-balance text-black">
-              Kejelasan finansial dimulai dari angka yang jujur.
+              Saldo besar di rekening sering menipu kalau belum dipisah.
             </h2>
             <p className="text-base sm:text-lg text-[#4a4d52] leading-relaxed">
-              Kebanyakan aplikasi keuangan hanya menjumlahkan pemasukan dan pengeluaran, membuat tabungan Anda terasa seperti uang bebas. KasKu dibangun dengan arsitektur deterministik: setiap rupiah memiliki status yang jelas antara kas operasional, tabungan tujuan, dan kewajiban jatuh tempo.
+              Saat uang tabungan, uang belanja harian, dan tagihan akhir bulan bercampur di satu angka, rasanya selalu aman sampai tiba-tiba kurang. KasKu memisahkan ketiganya sejak awal Anda mencatat.
             </p>
 
             <div className="pt-4 border-t border-[#e4e4e2] grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -130,10 +129,10 @@ export function LandingFeatures() {
                   01
                 </div>
                 <div className="mt-1 text-sm font-medium text-black">
-                  Bebas Bias Laporan
+                  Uang Jajan Terukur
                 </div>
                 <p className="mt-1 text-xs text-[#4a4d52] leading-relaxed">
-                  Mutasi tabungan tidak dicatat sebagai pengeluaran fiktif.
+                  Lihat batas belanja harian Anda dari hari ini sampai akhir bulan.
                 </p>
               </div>
               <div>
@@ -141,10 +140,10 @@ export function LandingFeatures() {
                   02
                 </div>
                 <div className="mt-1 text-sm font-medium text-black">
-                  Simulasi Sebelum Beli
+                  Tabungan Tidak Terganggu
                 </div>
                 <p className="mt-1 text-xs text-[#4a4d52] leading-relaxed">
-                  Uji dampak transaksi terhadap jatah harian dan tagihan 7 hari.
+                  Sisihkan uang ke pos khusus tanpa merusak laporan pengeluaran.
                 </p>
               </div>
               <div>
@@ -152,10 +151,10 @@ export function LandingFeatures() {
                   03
                 </div>
                 <div className="mt-1 text-sm font-medium text-black">
-                  Isolasi Multi-Pengguna
+                  Cicilan & Tagihan Jelas
                 </div>
                 <p className="mt-1 text-xs text-[#4a4d52] leading-relaxed">
-                  Seluruh data disaring ketat per akun dengan otorisasi JWT.
+                  Langganan rutin dan hutang teman tercatat otomatis statusnya.
                 </p>
               </div>
             </div>
@@ -166,41 +165,41 @@ export function LandingFeatures() {
               <div className="aspect-[4/3] overflow-hidden">
                 <img
                   src="/images/telemetry-ledger.jpg"
-                  alt="Instrumen presisi pencatatan keuangan KasKu"
+                  alt="Catatan keuangan pribadi KasKu yang rapi"
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                 />
               </div>
               <div className="px-5 py-4 border-t border-[#e4e4e2] bg-white flex items-center justify-between text-xs text-[#4a4d52]">
-                <span>Arsitektur Buku Besar Deterministik</span>
-                <span className="font-mono num-tabular text-black">v2.0 Engine</span>
+                <span>Catatan Keuangan Pribadi KasKu</span>
+                <span className="font-mono num-tabular text-black">Ringkas & Jelas</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. Interactive Core Architecture Section */}
+      {/* 2. Fitur Utama KasKu */}
       <section
-        id="arsitektur"
+        id="fitur"
         className="bg-[#f5f5f3] border-b border-[#e4e4e2]"
       >
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28">
           <div className="max-w-2xl mb-12 space-y-4">
             <h2 className="font-display text-3xl sm:text-5xl font-semibold tracking-[-0.025em] leading-[1.08] text-black">
-              Empat pilar manajemen kas yang saling terhubung.
+              Semua keperluan kas pribadi ada di satu tempat.
             </h2>
             <p className="text-base sm:text-lg text-[#4a4d52] leading-relaxed">
-              Pilih modul di bawah ini untuk melihat bagaimana setiap komponen KasKu bekerja bersama menjaga kesehatan arus kas Anda.
+              Pilih bagian di bawah untuk melihat bagaimana KasKu membantu mengatur uang sehari-hari.
             </p>
           </div>
 
-          {/* Module Switcher Tabs */}
+          {/* Feature Switcher Tabs */}
           <div
             className="flex flex-wrap gap-2 border-b border-[#e4e4e2] pb-4 mb-10"
             role="tablist"
-            aria-label="Pilar Arsitektur KasKu"
+            aria-label="Fitur Utama KasKu"
           >
-            {ARCHITECTURE_MODULES.map((mod) => {
+            {FEATURE_MODULES.map((mod) => {
               const isActive = mod.id === activeModuleId;
               return (
                 <button
@@ -221,7 +220,7 @@ export function LandingFeatures() {
             })}
           </div>
 
-          {/* Active Module Content */}
+          {/* Active Feature Content */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             <div className="lg:col-span-6 space-y-6">
               <h3 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-black">
@@ -235,10 +234,10 @@ export function LandingFeatures() {
                 {activeModule.specs.map((spec) => (
                   <div
                     key={spec.label}
-                    className="py-3.5 flex items-center justify-between gap-4 text-sm"
+                    className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 text-sm"
                   >
-                    <span className="text-[#4a4d52]">{spec.label}</span>
-                    <span className="font-mono font-medium text-black text-right num-tabular">
+                    <span className="font-medium text-black">{spec.label}</span>
+                    <span className="text-[#4a4d52] sm:text-right">
                       {spec.value}
                     </span>
                   </div>
@@ -273,7 +272,7 @@ export function LandingFeatures() {
               Lihat sisa saldo Anda sebelum menekan tombol beli.
             </h2>
             <p className="text-base text-[#4a4d52] leading-relaxed">
-              Simulasi ini menggunakan logika perhitungan yang sama persis dengan backend KasKu (`SimulasiBeli`). Coba pilih barang dan sumber dana di samping untuk menguji skenario kas Anda.
+              Simulasi ini memakai cara hitung yang sama dengan di dalam aplikasi KasKu. Coba pilih barang dan sumber dananya untuk melihat perubahan saldo Anda.
             </p>
 
             <div className="pt-2 space-y-4">
@@ -337,7 +336,7 @@ export function LandingFeatures() {
             </div>
           </div>
 
-          {/* Live Telemetry Preview Panel */}
+          {/* Live Preview Panel */}
           <div className="lg:col-span-7 rounded-sm border border-[#e4e4e2] bg-[#f5f5f3] p-6 sm:p-8 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-[#e4e4e2]">
               <div>

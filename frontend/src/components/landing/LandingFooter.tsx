@@ -1,72 +1,72 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowUpRight, ShieldCheck, Lock, Server, Database } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Lock, FileSpreadsheet, RotateCcw } from "lucide-react";
 
-const SECURITY_SPECS = [
+const PRIVACY_POINTS = [
   {
     icon: Lock,
-    title: "Autentikasi & Rotasi Token",
-    detail: "Access token JWT HS256 berumur 15 menit dengan refresh token SHA-256 terotasi dan deteksi penyalahgunaan otomatis.",
+    title: "Akun Pribadi Terpisah",
+    detail: "Setiap pengguna memiliki ruang catatan sendiri. Data pemasukan, tabungan, dan wishlist Anda tidak bisa dilihat orang lain.",
   },
   {
     icon: ShieldCheck,
-    title: "Proteksi Anti-SSRF & Sanitasi",
-    detail: "Setiap pengambilan link wishlist memblokir IP privat/metadata cloud sebelum koneksi dibuka dan membersihkan HTML berbahaya.",
+    title: "Bebas Iklan & Penawaran Pinjaman",
+    detail: "Tampilan dibuat tenang agar Anda bisa fokus memeriksa kondisi keuangan tanpa gangguan pop-up atau iklan produk.",
   },
   {
-    icon: Database,
-    title: "Isolasi Data Multi-Pengguna",
-    detail: "Seluruh query SQL disaring ketat menggunakan user_id dari context JWT terverifikasi, tanpa celah spoofing parameter.",
+    icon: FileSpreadsheet,
+    title: "Ekspor Data ke CSV Kapan Saja",
+    detail: "Unduh seluruh riwayat transaksi dan mutasi tabungan ke file CSV kalau Anda ingin mengolahnya lagi di Excel atau Google Sheets.",
   },
   {
-    icon: Server,
-    title: "Konsistensi Transaksi Atomik",
-    detail: "Mutasi tabungan dan pembelian wishlist dikunci pada level baris database untuk mencegah saldo negatif pada permintaan bersamaan.",
+    icon: RotateCcw,
+    title: "Salah Pencet Bisa Dibatalkan",
+    detail: "Pembelian wishlist yang sudah telanjur dicatat dapat dibatalkan dengan satu klik untuk mengembalikan saldo seperti semula.",
   },
 ];
 
 export function LandingFooter() {
   return (
     <footer className="bg-black text-white border-t border-white/15">
-      {/* Security & Engineering Specifications */}
+      {/* Privacy & Control Section */}
       <section
-        id="keamanan"
+        id="privasi"
         className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28 border-b border-white/15"
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-5 space-y-5">
             <h2 className="font-display text-3xl sm:text-4xl font-semibold tracking-[-0.025em] leading-[1.1] text-white">
-              Keamanan dan keandalan sebagai fondasi, bukan tambahan.
+              Data keuangan Anda hanya untuk Anda.
             </h2>
             <p className="text-base text-[#bbbcbc] leading-relaxed">
-              Dibangun dengan backend Golang Fiber dan PostgreSQL Neon Serverless, setiap perhitungan saldo dan mutasi tabungan diproses secara deterministik di sisi server.
+              KasKu dibuat sebagai alat bantu catat pribadi yang tenang. Semua angka dihitung apa adanya supaya Anda selalu tahu kondisi uang Anda sebelum mengambil keputusan.
             </p>
             <div className="pt-2">
               <Link
                 href="/dashboard"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-sm bg-white hover:bg-[#f5f5f3] text-black font-semibold text-sm transition-all duration-200 active:scale-[0.98]"
               >
-                <span>Mulai Gunakan KasKu</span>
+                <span>Mulai Pakai KasKu</span>
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
 
           <div className="lg:col-span-7 divide-y divide-white/15 border-y border-white/15">
-            {SECURITY_SPECS.map((spec) => {
-              const Icon = spec.icon;
+            {PRIVACY_POINTS.map((item) => {
+              const Icon = item.icon;
               return (
                 <div
-                  key={spec.title}
+                  key={item.title}
                   className="py-5 flex items-start gap-4"
                 >
                   <Icon className="w-5 h-5 text-[#38bdf8] shrink-0 mt-0.5" aria-hidden="true" />
                   <div className="space-y-1">
                     <h3 className="font-display text-base font-semibold text-white">
-                      {spec.title}
+                      {item.title}
                     </h3>
                     <p className="text-sm text-[#bbbcbc] leading-relaxed">
-                      {spec.detail}
+                      {item.detail}
                     </p>
                   </div>
                 </div>
@@ -94,22 +94,22 @@ export function LandingFooter() {
             </span>
           </div>
           <p className="text-xs text-[#bbbcbc]">
-            Sistem pencatat keuangan pribadi dengan saldo bebas, pos tabungan, dan simulasi wishlist.
+            Catatan kas pribadi dengan saldo bebas, pos tabungan, dan simulasi wishlist.
           </p>
         </div>
 
         <nav className="flex flex-wrap items-center gap-6 text-sm text-[#bbbcbc]" aria-label="Navigasi footer">
-          <a href="#misi" className="hover:text-white transition-colors">
-            Misi
+          <a href="#cara-kerja" className="hover:text-white transition-colors">
+            Cara Kerja
           </a>
-          <a href="#arsitektur" className="hover:text-white transition-colors">
-            Arsitektur
+          <a href="#fitur" className="hover:text-white transition-colors">
+            Fitur
           </a>
           <a href="#simulasi" className="hover:text-white transition-colors">
             Simulasi
           </a>
-          <a href="#keamanan" className="hover:text-white transition-colors">
-            Keamanan
+          <a href="#privasi" className="hover:text-white transition-colors">
+            Privasi
           </a>
           <Link href="/dashboard" className="text-[#38bdf8] hover:text-white transition-colors font-medium">
             Dashboard
