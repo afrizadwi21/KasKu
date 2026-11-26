@@ -87,3 +87,38 @@ export interface UnpaidItem {
   status: string;
   telat_hari: number;
 }
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  user: UserProfile;
+}
+
+export interface SavingsPot {
+  id: string;
+  name: string;
+  target_amount: number;
+  saved_amount: number;
+  deadline?: string;
+  note: string;
+  archived: boolean;
+  progress_pct?: number;
+}
+
+export interface WishlistItem {
+  id: string;
+  name: string;
+  price: number;
+  priority: "rendah" | "sedang" | "tinggi";
+  category: string;
+  note: string;
+  target_date?: string;
+  status: "aktif" | "dibeli" | "dibatalkan";
+}

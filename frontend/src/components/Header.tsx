@@ -1,58 +1,70 @@
 "use client";
 
 import React from "react";
-import { Plus, Wallet, ArrowDownRight, ArrowUpRight, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Plus, LogOut } from "lucide-react";
 
 interface HeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onOpenModal: () => void;
-  userName?: string;
+  onLogout: () => void;
+  userName: string;
+  userEmail?: string;
 }
 
-export function Header({ activeTab, setActiveTab, onOpenModal, userName = "Afriza" }: HeaderProps) {
+export function Header({
+  activeTab,
+  setActiveTab,
+  onOpenModal,
+  onLogout,
+  userName,
+  userEmail,
+}: HeaderProps) {
   const tabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "transactions", label: "Transaksi" },
     { id: "debts", label: "Piutang & Hutang" },
     { id: "subscriptions", label: "Langganan & Tagihan" },
+    { id: "savings", label: "Tabungan" },
+    { id: "wishlist", label: "Wishlist" },
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-200 bg-white/90 backdrop-blur-md dark:border-zinc-800 dark:bg-[#0b0d11]/90">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+    <header className="sticky top-0 z-40 w-full border-b border-[#f4f7f5]/10 bg-[#070a09]/95 text-[#f4f7f5] backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-700 text-white shadow-xs dark:bg-teal-600">
-            <Wallet className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-base tracking-tight text-zinc-900 dark:text-zinc-50">
-                KasKu
-              </span>
-              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                Multi-User
-              </span>
-            </div>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 hidden sm:block">
-              Financial Precision Ledger
-            </p>
-          </div>
-        </div>
+        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <rect width="28" height="28" rx="6" fill="#0e1412" stroke="#10b981" strokeWidth="1.5" />
+            <path
+              d="M9 8.5V19.5M9 14L17.5 8.5M12.5 11.8L18.5 19.5"
+              stroke="#10b981"
+              strokeWidth="2.2"
+              strokeLinecap="square"
+            />
+          </svg>
+          <span className="font-display text-lg tracking-tight text-[#f4f7f5]">
+            KasKu
+          </span>
+        </Link>
 
-        {/* Navigation Tabs */}
-        <nav className="hidden md:flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50/80 p-1 dark:border-zinc-800 dark:bg-zinc-900/60">
+        {/* Topbar Navigation Tabs */}
+        <nav
+          aria-label="Navigasi Dashboard"
+          className="hidden lg:flex items-center gap-1 rounded-sm border border-[#f4f7f5]/10 bg-[#0e1412] p-1"
+        >
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`rounded-sm px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                   isActive
-                    ? "bg-white text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-zinc-50"
-                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                    ? "bg-[#10b981] text-[#070a09] font-semibold"
+                    : "text-[#a3b8ad] hover:text-[#f4f7f5]"
                 }`}
               >
                 {tab.label}
@@ -61,40 +73,57 @@ export function Header({ activeTab, setActiveTab, onOpenModal, userName = "Afriz
           })}
         </nav>
 
-        {/* Action & User Pill */}
-        <div className="flex items-center gap-2.5">
+        {/* Action & User Controls */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
+            type="button"
             onClick={onOpenModal}
-            className="flex items-center gap-1.5 rounded-md bg-teal-700 px-3.5 py-1.5 text-xs font-medium text-white transition-all hover:bg-teal-800 active:scale-98 dark:bg-teal-600 dark:hover:bg-teal-500"
+            className="flex items-center gap-1.5 rounded-sm bg-[#10b981] px-3.5 py-1.5 text-xs font-semibold text-[#070a09] transition-colors hover:bg-[#34d399] active:scale-[0.98] cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Catat Kas</span>
           </button>
 
-          <div className="hidden sm:flex items-center gap-2 border-l border-zinc-200 pl-3 dark:border-zinc-800">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-              {userName.charAt(0).toUpperCase()}
+          <div className="hidden sm:flex items-center gap-2.5 border-l border-[#f4f7f5]/15 pl-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#10b981]/20 border border-[#10b981]/40 text-xs font-semibold text-[#34d399]">
+              {userName ? userName.charAt(0).toUpperCase() : "U"}
             </div>
-            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              {userName}
-            </span>
+            <div className="leading-tight">
+              <div className="text-xs font-medium text-[#f4f7f5]">{userName}</div>
+              {userEmail && (
+                <div className="text-[10px] text-[#a3b8ad] max-w-[140px] truncate">
+                  {userEmail}
+                </div>
+              )}
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            title="Keluar dari akun"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-[#f4f7f5]/15 bg-[#0e1412] px-2.5 py-1.5 text-xs font-medium text-[#a3b8ad] hover:border-red-500/40 hover:text-red-300 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">Keluar</span>
+          </button>
         </div>
       </div>
 
-      {/* Mobile Tab Bar */}
-      <div className="flex md:hidden overflow-x-auto border-t border-zinc-200 px-4 py-2 dark:border-zinc-800">
+      {/* Mobile & Tablet Topbar Tabs */}
+      <div className="flex lg:hidden overflow-x-auto border-t border-[#f4f7f5]/10 px-4 py-2 bg-[#0e1412]">
         <div className="flex gap-1.5">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap rounded-md px-3 py-1 text-xs font-medium ${
+                className={`whitespace-nowrap rounded-sm px-3 py-1 text-xs font-medium transition-colors ${
                   isActive
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                    ? "bg-[#10b981] text-[#070a09] font-semibold"
+                    : "bg-[#070a09] text-[#a3b8ad] hover:text-[#f4f7f5]"
                 }`}
               >
                 {tab.label}

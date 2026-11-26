@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Text3D } from "./Text3D";
 
 const TELEMETRY_ITEMS = [
@@ -75,13 +75,6 @@ export function LandingHero() {
               <span>Mulai Catat Sekarang</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
-            <a
-              href="#showcase-3d"
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-sm border border-[#f4f7f5]/30 bg-[#f4f7f5]/5 hover:bg-[#f4f7f5]/15 text-[#f4f7f5] font-medium text-sm sm:text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b981]"
-            >
-              <Play className="w-4 h-4 text-[#34d399]" />
-              <span>Lihat Cara Kerja 3D</span>
-            </a>
           </div>
         </div>
       </div>

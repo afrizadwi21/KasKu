@@ -87,6 +87,16 @@ export function LandingNavbar() {
         {/* Right Actions */}
         <div className="flex items-center gap-3">
           <Link
+            href="/login"
+            className={`hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium transition-colors ${
+              scrolled
+                ? "text-[#47544d] hover:text-[#0b110e]"
+                : "text-[#f4f7f5]/80 hover:text-[#f4f7f5]"
+            }`}
+          >
+            Masuk
+          </Link>
+          <Link
             href="/dashboard"
             className={`hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b981] ${
               scrolled
