@@ -148,7 +148,7 @@ export function KasKu3DScrollShowcase() {
     <section
       ref={sectionRef}
       id="showcase-3d"
-      className="relative h-[300vh] bg-[#140a05] text-[#f8f4ee] border-y border-[#f8f4ee]/15"
+      className="relative h-[300vh] bg-[#070a09] text-[#f4f7f5] border-y border-[#f4f7f5]/15"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between pt-20 sm:pt-24 pb-6">
         {/* Top Stage Navigation & Scroll Progress */}
@@ -161,8 +161,8 @@ export function KasKu3DScrollShowcase() {
                 onClick={() => scrollToStage(st.id)}
                 className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors ${
                   activeStage === st.id
-                    ? "bg-[#ff5b14] text-white"
-                    : "bg-[#f8f4ee]/10 text-[#ffc9a3]/80 hover:text-[#f8f4ee]"
+                    ? "bg-[#10b981] text-[#070a09] font-semibold"
+                    : "bg-[#f4f7f5]/10 text-[#a3b8ad] hover:text-[#f4f7f5]"
                 }`}
               >
                 {st.title}
@@ -172,21 +172,21 @@ export function KasKu3DScrollShowcase() {
 
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2">
-              <div className="w-28 h-1 bg-[#f8f4ee]/15 overflow-hidden rounded-full">
+              <div className="w-28 h-1 bg-[#f4f7f5]/15 overflow-hidden rounded-full">
                 <div
                   ref={barRef}
-                  className="h-full bg-[#ff5b14]"
+                  className="h-full bg-[#10b981]"
                   style={{ width: "0%" }}
                 />
               </div>
-              <span className="font-mono text-xs text-[#ffc9a3]/80 num-tabular w-9 text-right">
+              <span className="font-mono text-xs text-[#a3b8ad] num-tabular w-9 text-right">
                 {progressPct}%
               </span>
             </div>
 
             <a
               href="#cara-kerja"
-              className="inline-flex items-center gap-1 text-xs text-[#ffc9a3]/80 hover:text-[#f8f4ee] transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-[#a3b8ad] hover:text-[#f4f7f5] transition-colors"
             >
               <span>Lewati</span>
               <ArrowDown className="w-3.5 h-3.5" />
@@ -197,18 +197,18 @@ export function KasKu3DScrollShowcase() {
         {/* Center 3D Product Render Stage + Narrative */}
         <div className="max-w-7xl w-full mx-auto px-5 sm:px-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-5 space-y-5 z-10">
-            <Text3D as="h2" variant="light" className="text-4xl sm:text-5xl text-[#f8f4ee]">
+            <Text3D as="h2" variant="light" className="text-4xl sm:text-5xl text-[#f4f7f5]">
               {currentStage.title}
             </Text3D>
-            <p className="text-sm sm:text-base text-[#ffc9a3]/85 leading-relaxed">
+            <p className="text-sm sm:text-base text-[#a3b8ad] leading-relaxed">
               {currentStage.description}
             </p>
 
-            <div className="pt-4 border-t border-[#f8f4ee]/15 flex items-baseline justify-between">
-              <span className="text-xs uppercase tracking-wider text-[#ffc9a3]/75">
+            <div className="pt-4 border-t border-[#f4f7f5]/15 flex items-baseline justify-between">
+              <span className="text-xs uppercase tracking-wider text-[#a3b8ad]/80">
                 {currentStage.metricLabel}
               </span>
-              <span className="font-mono text-2xl font-semibold text-[#ff7a2e] num-tabular">
+              <span className="font-mono text-2xl font-semibold text-[#34d399] num-tabular">
                 {currentStage.metricValue}
               </span>
             </div>
@@ -216,7 +216,7 @@ export function KasKu3DScrollShowcase() {
             <div className="pt-2">
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 text-sm font-medium text-[#f8f4ee] hover:text-[#ff7a2e] transition-colors"
+                className="inline-flex items-center gap-2 text-sm font-medium text-[#f4f7f5] hover:text-[#34d399] transition-colors"
               >
                 <span>Buka di Dashboard</span>
                 <ArrowRight className="w-4 h-4" />

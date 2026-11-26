@@ -74,19 +74,19 @@ export function KasKu3DTextCylinder() {
     <section
       ref={sectionRef}
       aria-label="Roda Fitur 3D KasKu"
-      className="relative h-[260vh] bg-[#140a05] text-[#f8f4ee] border-b border-[#f8f4ee]/15"
+      className="relative h-[260vh] bg-[#070a09] text-[#f4f7f5] border-b border-[#f4f7f5]/15"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between py-20 sm:py-24 px-5 sm:px-8">
         <div className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4 z-10">
           <div>
-            <h2 className="font-display text-3xl sm:text-4xl text-[#f8f4ee]">
+            <h2 className="font-display text-3xl sm:text-4xl text-[#f4f7f5]">
               Semua yang Anda butuhkan dalam satu alur.
             </h2>
-            <p className="mt-2 text-sm text-[#ffc9a3]/80">
+            <p className="mt-2 text-sm text-[#a3b8ad]">
               Gulir turun atau naik untuk memutar daftar kemampuan KasKu.
             </p>
           </div>
-          <div className="font-mono text-xs text-[#ff7a2e] num-tabular">
+          <div className="font-mono text-xs text-[#34d399] num-tabular">
             {String(activeIndex + 1).padStart(2, "0")} / {String(totalItems).padStart(2, "0")}
           </div>
         </div>
@@ -119,7 +119,7 @@ export function KasKu3DTextCylinder() {
                 >
                   <span
                     className={`font-display text-2xl sm:text-5xl lg:text-6xl tracking-tight transition-colors duration-300 ${
-                      isFocused ? "text-[#ff5b14]" : "text-[#f8f4ee]"
+                      isFocused ? "text-[#10b981]" : "text-[#f4f7f5]"
                     }`}
                   >
                     {item.label}
@@ -127,8 +127,8 @@ export function KasKu3DTextCylinder() {
                   <span
                     className={`hidden sm:inline-block font-mono text-xs uppercase tracking-widest px-3 py-1 rounded-sm border transition-colors duration-300 ${
                       isFocused
-                        ? "border-[#ff5b14] text-[#ff7a2e] bg-[#ff5b14]/10"
-                        : "border-[#f8f4ee]/20 text-[#ffc9a3]/70"
+                        ? "border-[#10b981] text-[#34d399] bg-[#10b981]/10"
+                        : "border-[#f4f7f5]/20 text-[#a3b8ad]"
                     }`}
                   >
                     {item.tag}
@@ -139,7 +139,7 @@ export function KasKu3DTextCylinder() {
           </ol>
         </div>
 
-        <div className="max-w-7xl w-full mx-auto flex items-center justify-between text-xs text-[#f8f4ee]/50">
+        <div className="max-w-7xl w-full mx-auto flex items-center justify-between text-xs text-[#f4f7f5]/50">
           <span>Terus gulir untuk melanjutkan</span>
           <span className="font-mono num-tabular">{progressPct}%</span>
         </div>

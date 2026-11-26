@@ -100,25 +100,25 @@ export function LandingFooter() {
   };
 
   return (
-    <footer className="bg-[#140a05] text-[#f8f4ee] border-t border-[#f8f4ee]/15 overflow-hidden">
+    <footer className="bg-[#070a09] text-[#f4f7f5] border-t border-[#f4f7f5]/15 overflow-hidden">
       {/* Privacy & Control Section with Slow Physics-Damped 3D Spatial Cascade Deck */}
       <section
         ref={sectionRef}
         id="privasi"
-        className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28 border-b border-[#f8f4ee]/15"
+        className="max-w-7xl mx-auto px-5 sm:px-8 py-20 sm:py-28 border-b border-[#f4f7f5]/15"
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-14 items-center">
           <div className="lg:col-span-5 space-y-5">
-            <Text3D as="h2" variant="light" className="text-4xl sm:text-5xl text-[#f8f4ee]">
+            <Text3D as="h2" variant="light" className="text-4xl sm:text-5xl text-[#f4f7f5]">
               Data keuangan Anda hanya untuk Anda.
             </Text3D>
-            <p className="text-base text-[#ffc9a3]/85 leading-relaxed">
+            <p className="text-base text-[#a3b8ad] leading-relaxed">
               KasKu dibuat sebagai alat bantu catat pribadi yang tenang. Semua angka dihitung apa adanya supaya Anda selalu tahu kondisi uang Anda sebelum mengambil keputusan.
             </p>
             <div className="pt-2">
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-sm bg-[#ff5b14] hover:bg-[#ff7a2e] text-white font-semibold text-sm transition-all duration-200 active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-sm bg-[#10b981] hover:bg-[#34d399] text-[#070a09] font-semibold text-sm transition-all duration-200 active:scale-[0.98]"
               >
                 <span>Mulai Pakai KasKu</span>
                 <ArrowUpRight className="w-4 h-4" />
@@ -126,12 +126,12 @@ export function LandingFooter() {
             </div>
 
             <Scroll3DFrame direction="left" intensity={1.25} className="pt-4">
-              <div className="relative overflow-hidden rounded-sm border border-[#ff5b14]/25 bg-[#1a0e08] shadow-[0_24px_60px_-20px_rgba(255,91,20,0.22)]">
+              <div className="relative overflow-hidden rounded-sm border border-[#10b981]/25 bg-[#0e1412] shadow-[0_24px_60px_-20px_rgba(16,185,129,0.22)]">
                 <div className="aspect-[16/10] overflow-hidden">
                   <img
                     src="/images/3d-privacy-lock.jpg"
                     alt="Render 3D gembok keamanan data pribadi KasKu"
-                    className="w-full h-full object-cover sepia-[.28] hue-rotate-[-24deg] contrast-110"
+                    className="w-full h-full object-cover contrast-110"
                   />
                 </div>
               </div>
@@ -162,8 +162,8 @@ export function LandingFooter() {
                   }}
                   className={`relative rounded-sm border p-5 sm:p-6 transition-colors duration-300 will-change-transform cursor-default ${
                     isFocused
-                      ? "border-[#ff5b14] bg-[#24130b] shadow-[0_24px_50px_-18px_rgba(255,91,20,0.35)]"
-                      : "border-[#f8f4ee]/15 bg-[#1a0e08]/90"
+                      ? "border-[#10b981] bg-[#121c18] shadow-[0_24px_50px_-18px_rgba(16,185,129,0.3)]"
+                      : "border-[#f4f7f5]/15 bg-[#0e1412]/90"
                   }`}
                   style={{
                     opacity: isDimmed ? 0.65 : 1,
@@ -174,17 +174,17 @@ export function LandingFooter() {
                     <div
                       className={`p-2.5 rounded-sm border transition-colors ${
                         isFocused
-                          ? "border-[#ff5b14] bg-[#ff5b14]/15 text-[#ff7a2e]"
-                          : "border-[#f8f4ee]/15 bg-[#140a05] text-[#ff7a2e]"
+                          ? "border-[#10b981] bg-[#10b981]/15 text-[#34d399]"
+                          : "border-[#f4f7f5]/15 bg-[#070a09] text-[#34d399]"
                       }`}
                     >
                       <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
                     </div>
                     <div className="space-y-1.5">
-                      <h3 className="font-display-sub text-lg text-[#f8f4ee]">
+                      <h3 className="font-display-sub text-lg text-[#f4f7f5]">
                         {item.title}
                       </h3>
-                      <p className="text-sm text-[#ffc9a3]/80 leading-relaxed">
+                      <p className="text-sm text-[#a3b8ad] leading-relaxed">
                         {item.detail}
                       </p>
                     </div>
@@ -201,10 +201,10 @@ export function LandingFooter() {
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">
             <svg width="24" height="24" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-              <rect x="2" y="2" width="24" height="24" rx="4" stroke="#f8f4ee" strokeWidth="1.75" />
+              <rect x="2" y="2" width="24" height="24" rx="4" stroke="#f4f7f5" strokeWidth="1.75" />
               <path
                 d="M9 8.5V19.5M9 14L17.5 8.5M12.5 11.8L18.5 19.5"
-                stroke="#ff5b14"
+                stroke="#10b981"
                 strokeWidth="2.2"
                 strokeLinecap="square"
               />
@@ -213,30 +213,30 @@ export function LandingFooter() {
               KasKu
             </span>
           </div>
-          <p className="text-xs text-[#ffc9a3]/75">
+          <p className="text-xs text-[#a3b8ad]">
             Catatan kas pribadi dengan saldo bebas, pos tabungan, dan simulasi wishlist.
           </p>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-6 text-sm text-[#ffc9a3]/80" aria-label="Navigasi footer">
-          <a href="#cara-kerja" className="hover:text-[#f8f4ee] transition-colors">
+        <nav className="flex flex-wrap items-center gap-6 text-sm text-[#a3b8ad]" aria-label="Navigasi footer">
+          <a href="#cara-kerja" className="hover:text-[#f4f7f5] transition-colors">
             Cara Kerja
           </a>
-          <a href="#fitur" className="hover:text-[#f8f4ee] transition-colors">
+          <a href="#fitur" className="hover:text-[#f4f7f5] transition-colors">
             Fitur
           </a>
-          <a href="#simulasi" className="hover:text-[#f8f4ee] transition-colors">
+          <a href="#simulasi" className="hover:text-[#f4f7f5] transition-colors">
             Simulasi
           </a>
-          <a href="#privasi" className="hover:text-[#f8f4ee] transition-colors">
+          <a href="#privasi" className="hover:text-[#f4f7f5] transition-colors">
             Privasi
           </a>
-          <Link href="/dashboard" className="text-[#ff7a2e] hover:text-[#f8f4ee] transition-colors font-medium">
+          <Link href="/dashboard" className="text-[#34d399] hover:text-[#f4f7f5] transition-colors font-medium">
             Dashboard
           </Link>
         </nav>
 
-        <div className="text-xs text-[#f8f4ee]/50 font-mono">
+        <div className="text-xs text-[#f4f7f5]/50 font-mono">
           © 2026 KasKu
         </div>
       </div>
