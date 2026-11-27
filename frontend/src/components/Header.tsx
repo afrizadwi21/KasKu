@@ -416,7 +416,7 @@ export function Header({
                 key={item.id}
                 type="button"
                 onClick={() => handleSelectTab(item.id)}
-                className={`min-w-0 w-full h-16 flex flex-col items-center justify-center gap-1 text-[10px] font-medium leading-none whitespace-nowrap transition-colors ${
+                className={`min-w-0 w-full h-16 flex flex-col items-center justify-center gap-1 text-[10px] font-medium leading-none whitespace-nowrap transition-colors cursor-pointer touch-manipulation ${
                   isActive
                     ? isDark
                       ? "text-[#34d399]"
@@ -436,7 +436,7 @@ export function Header({
               type="button"
               onClick={onOpenModal}
               aria-label="Catat Kas"
-              className={`-mt-6 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#10b981] text-[#070a09] shadow-lg ring-4 transition-transform active:scale-95 ${
+              className={`-mt-6 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#10b981] text-[#070a09] shadow-lg ring-4 transition-transform active:scale-95 cursor-pointer touch-manipulation ${
                 isDark ? "ring-[#070a09]" : "ring-[#f7f8f7]"
               }`}
             >
@@ -462,7 +462,7 @@ export function Header({
                 key={item.id}
                 type="button"
                 onClick={() => handleSelectTab(item.id)}
-                className={`min-w-0 w-full h-16 flex flex-col items-center justify-center gap-1 text-[10px] font-medium leading-none whitespace-nowrap transition-colors ${
+                className={`min-w-0 w-full h-16 flex flex-col items-center justify-center gap-1 text-[10px] font-medium leading-none whitespace-nowrap transition-colors cursor-pointer touch-manipulation ${
                   isActive
                     ? isDark
                       ? "text-[#34d399]"
