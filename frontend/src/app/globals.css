@@ -1,11 +1,14 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+html {
+  overflow-y: scroll;
+}
+
 html,
 body {
   overflow-x: clip;
   max-width: 100%;
-  scrollbar-gutter: stable;
 }
 
 :root {
