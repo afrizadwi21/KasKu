@@ -2,7 +2,6 @@ import React from "react";
 import { LandingNavbar } from "../components/landing/LandingNavbar";
 import { LandingHero } from "../components/landing/LandingHero";
 import { KasKu3DScrollShowcase } from "../components/landing/KasKu3DScrollShowcase";
-import { KasKu3DTextCylinder } from "../components/landing/KasKu3DTextCylinder";
 import { LandingFeatures } from "../components/landing/LandingFeatures";
 import { LandingFooter } from "../components/landing/LandingFooter";
 
@@ -13,7 +12,6 @@ export default function LandingPage() {
       <main className="flex-1">
         <LandingHero />
         <KasKu3DScrollShowcase />
-        <KasKu3DTextCylinder />
         <LandingFeatures />
       </main>
       <LandingFooter />
