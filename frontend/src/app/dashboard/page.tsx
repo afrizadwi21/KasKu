@@ -2540,14 +2540,14 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="pt-2">
-                    <div className={`h-56 flex items-end gap-2 sm:gap-3 border-b ${borderCls} pb-2`}>
+                    <div className={`h-56 flex items-end gap-1 sm:gap-3 border-b ${borderCls} pb-2`}>
                       {monthsData.map((m, idx) => {
                         const masukPct = Math.round((m.masuk / maxMonthVal) * 100);
                         const keluarPct = Math.round((m.keluar / maxMonthVal) * 100);
                         return (
                           <div
                             key={MONTH_NAMES[idx]}
-                            className="flex-1 h-full flex flex-col justify-end items-center gap-1 group relative"
+                            className="flex-1 min-w-0 h-full flex flex-col justify-end items-center gap-1 group relative"
                           >
                             {/* Hover Tooltip */}
                             <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 z-20 rounded-md border border-[#0b110e]/15 bg-[#070a09] text-[#f4f7f5] px-2 py-1 text-[10px] font-mono whitespace-nowrap shadow-lg">
@@ -2556,13 +2556,13 @@ export default function DashboardPage() {
                               <div className="text-red-400">-{formatRupiah(m.keluar)}</div>
                             </div>
 
-                            <div className="w-full flex-1 flex items-end justify-center gap-1">
+                            <div className="w-full flex-1 flex items-end justify-center gap-0.5 sm:gap-1">
                               <div
-                                className="w-2.5 sm:w-3.5 rounded-t-sm bg-[#10b981] transition-all duration-300"
+                                className="w-1.5 sm:w-3.5 rounded-t-sm bg-[#10b981] transition-all duration-300"
                                 style={{ height: `${Math.max(m.masuk > 0 ? 4 : 1, masukPct)}%` }}
                               />
                               <div
-                                className="w-2.5 sm:w-3.5 rounded-t-sm bg-red-500 transition-all duration-300"
+                                className="w-1.5 sm:w-3.5 rounded-t-sm bg-red-500 transition-all duration-300"
                                 style={{ height: `${Math.max(m.keluar > 0 ? 4 : 1, keluarPct)}%` }}
                               />
                             </div>
@@ -2570,11 +2570,11 @@ export default function DashboardPage() {
                         );
                       })}
                     </div>
-                    <div className="flex gap-2 sm:gap-3 pt-2">
+                    <div className="flex gap-1 sm:gap-3 pt-2">
                       {MONTH_NAMES.map((name) => (
                         <div
                           key={name}
-                          className={`flex-1 text-center text-[10px] sm:text-xs font-mono ${mutedCls}`}
+                          className={`flex-1 min-w-0 text-center text-[9px] sm:text-xs font-mono ${mutedCls}`}
                         >
                           {name}
                         </div>
