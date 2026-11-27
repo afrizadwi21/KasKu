@@ -20,6 +20,7 @@ import {
 import { Header } from "../../components/Header";
 import { MetricCard, formatRupiah } from "../../components/MetricCard";
 import { TransactionModal } from "../../components/TransactionModal";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import {
   apiFetch,
   clearAuthSession,
@@ -178,6 +179,13 @@ export default function DashboardPage() {
   const [wishPriceSource, setWishPriceSource] = useState<"manual" | "link">("manual");
   const [fetchingLink, setFetchingLink] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    title: string;
+    description: string;
+    confirmLabel?: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadAllData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -379,7 +387,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteTransaction = async (id: string) => {
+  const executeDeleteTransaction = async (id: string) => {
     try {
       setErrorMsg("");
       await apiFetch(`/api/transactions/${id}`, { method: "DELETE" });
@@ -389,6 +397,14 @@ export default function DashboardPage() {
         err instanceof Error ? err.message : "Gagal menghapus transaksi."
       );
     }
+  };
+
+  const handleDeleteTransaction = (id: string) => {
+    setDeleteConfirm({
+      title: "Hapus Transaksi?",
+      description: "Transaksi yang dihapus tidak dapat dikembalikan.",
+      onConfirm: () => executeDeleteTransaction(id),
+    });
   };
 
   const handleSubmitDebtPayment = async (e: React.FormEvent) => {
@@ -579,7 +595,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteSavingsPot = async (potId: string) => {
+  const executeDeleteSavingsPot = async (potId: string) => {
     try {
       setErrorMsg("");
       setSuccessMsg("");
@@ -603,7 +619,16 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteSavingsMovement = async (movId: string) => {
+  const handleDeleteSavingsPot = (potId: string) => {
+    setDeleteConfirm({
+      title: "Hapus Pos Tabungan?",
+      description:
+        "Pos tabungan ini akan dihapus, atau ditutup dan saldonya dikembalikan ke saldo bebas jika sudah ada mutasi.",
+      onConfirm: () => executeDeleteSavingsPot(potId),
+    });
+  };
+
+  const executeDeleteSavingsMovement = async (movId: string) => {
     try {
       setErrorMsg("");
       setSuccessMsg("");
@@ -617,7 +642,16 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteSubscription = async (subId: string) => {
+  const handleDeleteSavingsMovement = (movId: string) => {
+    setDeleteConfirm({
+      title: "Batalkan Mutasi Tabungan?",
+      description: "Mutasi tabungan ini akan dibatalkan dan saldo disesuaikan kembali.",
+      confirmLabel: "Ya, Batalkan",
+      onConfirm: () => executeDeleteSavingsMovement(movId),
+    });
+  };
+
+  const executeDeleteSubscription = async (subId: string) => {
     try {
       setErrorMsg("");
       setSuccessMsg("");
@@ -631,7 +665,15 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteBill = async (billId: string) => {
+  const handleDeleteSubscription = (subId: string) => {
+    setDeleteConfirm({
+      title: "Hapus Langganan?",
+      description: "Data langganan ini akan dihapus dari daftar.",
+      onConfirm: () => executeDeleteSubscription(subId),
+    });
+  };
+
+  const executeDeleteBill = async (billId: string) => {
     try {
       setErrorMsg("");
       setSuccessMsg("");
@@ -643,6 +685,14 @@ export default function DashboardPage() {
         err instanceof Error ? err.message : "Gagal menghapus tagihan."
       );
     }
+  };
+
+  const handleDeleteBill = (billId: string) => {
+    setDeleteConfirm({
+      title: "Hapus Tagihan?",
+      description: "Tagihan ini akan dihapus dari daftar.",
+      onConfirm: () => executeDeleteBill(billId),
+    });
   };
 
   const handleSavingsAction = async (
@@ -855,7 +905,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteWishlist = async (id: string) => {
+  const executeDeleteWishlist = async (id: string) => {
     try {
       setErrorMsg("");
       await apiFetch(`/api/wishlist/${id}`, { method: "DELETE" });
@@ -865,6 +915,14 @@ export default function DashboardPage() {
         err instanceof Error ? err.message : "Gagal menghapus item wishlist."
       );
     }
+  };
+
+  const handleDeleteWishlist = (id: string) => {
+    setDeleteConfirm({
+      title: "Hapus Item Wishlist?",
+      description: "Item wishlist ini akan dihapus secara permanen.",
+      onConfirm: () => executeDeleteWishlist(id),
+    });
   };
 
   if (!authChecked || !user) {
@@ -2721,6 +2779,28 @@ export default function DashboardPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleCreateTransaction}
+        />
+
+        <ConfirmDeleteModal
+          isOpen={Boolean(deleteConfirm)}
+          title={deleteConfirm?.title || "Hapus Data?"}
+          description={deleteConfirm?.description || "Tindakan ini tidak dapat dibatalkan."}
+          confirmLabel={deleteConfirm?.confirmLabel}
+          loading={isDeleting}
+          isDark={isDark}
+          onCancel={() => {
+            if (!isDeleting) setDeleteConfirm(null);
+          }}
+          onConfirm={async () => {
+            if (!deleteConfirm || isDeleting) return;
+            setIsDeleting(true);
+            try {
+              await deleteConfirm.onConfirm();
+            } finally {
+              setIsDeleting(false);
+              setDeleteConfirm(null);
+            }
+          }}
         />
       </div>
     </div>

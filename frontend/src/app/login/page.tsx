@@ -2,13 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { getStoredAccessToken, loginUser } from "../../lib/api";
 import { getZodErrorMessage, loginSchema } from "../../lib/schemas";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,9 +15,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (getStoredAccessToken()) {
-      router.replace("/dashboard");
+      document.cookie = "kasku_auth=1; path=/; max-age=2592000; SameSite=Lax";
+      window.location.replace("/dashboard");
     }
-  }, [router]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +31,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await loginUser(parsed.data.email, parsed.data.password);
-      router.replace("/dashboard");
+      window.location.replace("/dashboard");
     } catch (err: unknown) {
       setError(
         err instanceof Error
