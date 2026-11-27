@@ -47,7 +47,7 @@ func (h *Handler) GetSubscriptions(c *fiber.Ctx) error {
 	rows, err := h.DB.Query(`
 		SELECT id, name, amount, cycle, first_due, active, created_at
 		FROM subscriptions
-		WHERE user_id = $1
+		WHERE user_id = $1 AND active = true
 		ORDER BY created_at DESC
 	`, userID)
 	if err != nil {

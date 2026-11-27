@@ -1662,13 +1662,13 @@ export default function DashboardPage() {
                   </button>
                 </form>
 
-                {subscriptions.length === 0 ? (
+                {subscriptions.filter((s) => s.active !== false).length === 0 ? (
                   <p className={`py-6 text-center text-xs ${mutedCls}`}>
                     Belum ada langganan terdaftar.
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {subscriptions.map((sub) => (
+                    {subscriptions.filter((s) => s.active !== false).map((sub) => (
                       <div
                         key={sub.id}
                         className={`flex items-center justify-between rounded-lg border ${borderCls} p-3.5`}
