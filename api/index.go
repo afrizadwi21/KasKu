@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 
-	"kasku-backend/internal/app"
+	"kasku-backend/pkg/app"
 )
 
 var (

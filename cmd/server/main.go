@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"kasku-backend/internal/app"
+	"kasku-backend/pkg/app"
 )
 
 func main() {
